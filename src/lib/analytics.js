@@ -67,7 +67,7 @@ export const analytics = {
     trackEvent("task_added", {
       event_category: "Task Management",
       task_time: taskData.time,
-      voice_gender: taskData.voiceGender,
+      has_custom_voice: taskData.hasCustomVoice,
       has_notes: !!taskData.notes,
     }),
 
@@ -75,7 +75,7 @@ export const analytics = {
     trackEvent("task_edited", {
       event_category: "Task Management",
       task_time: taskData.time,
-      voice_gender: taskData.voiceGender,
+      has_custom_voice: taskData.hasCustomVoice,
       has_notes: !!taskData.notes,
       enabled: taskData.enabled,
     }),
@@ -93,7 +93,32 @@ export const analytics = {
       task_id: taskId,
     }),
 
-  // Voice and TTS events
+  // Voice and recording events
+  voiceRecordingStarted: () =>
+    trackEvent("voice_recording_started", {
+      event_category: "Voice Recording",
+    }),
+
+  voiceRecordingCompleted: () =>
+    trackEvent("voice_recording_completed", {
+      event_category: "Voice Recording",
+    }),
+
+  voiceRecordingCancelled: () =>
+    trackEvent("voice_recording_cancelled", {
+      event_category: "Voice Recording",
+    }),
+
+  voiceRecordingPreviewed: () =>
+    trackEvent("voice_recording_previewed", {
+      event_category: "Voice Recording",
+    }),
+
+  voiceRecordingDeleted: () =>
+    trackEvent("voice_recording_deleted", {
+      event_category: "Voice Recording",
+    }),
+
   voicePreview: (gender) =>
     trackEvent("voice_preview", {
       event_category: "Voice",
@@ -112,7 +137,7 @@ export const analytics = {
       event_category: "Alarm",
       task_time: taskData.time,
       day: dayKey,
-      voice_gender: taskData.voiceGender,
+      has_custom_voice: taskData.hasCustomVoice,
     }),
 
   alarmStopped: () =>

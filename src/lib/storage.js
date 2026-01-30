@@ -15,7 +15,6 @@ export function makeDefaultState() {
     activeDay: "monday",
     settings: {
       showSunday: true,
-      voiceGender: "female",
     },
     schedule: {
       monday: [],
@@ -50,17 +49,27 @@ export function loadState() {
       schedule: { ...base.schedule, ...(parsed.schedule || {}) },
     };
 
-    // ✅ normalize tasks (backward compatible with older ringtone-based saves)
-    const defGender = merged.settings.voiceGender || base.settings.voiceGender || "female";
+    // ✅ normalize tasks (migrate from old voice system to new recording system)
     for (const dayKey of Object.keys(merged.schedule || {})) {
-      const list = Array.isArray(merged.schedule[dayKey]) ? merged.schedule[dayKey] : [];
+      const list = Array.isArray(merged.schedule[dayKey])
+        ? merged.schedule[dayKey]
+        : [];
       merged.schedule[dayKey] = list.map((t) => {
         const x = { ...(t || {}) };
         if (typeof x.enabled !== "boolean") x.enabled = true;
-        if (!x.voiceGender) x.voiceGender = defGender;
+
+        // Remove old voice gender properties and migrate to new system
+        delete x.voiceGender;
+
+        // Set hasCustomVoice to false for existing tasks (they'll need to re-record)
+        if (typeof x.hasCustomVoice !== "boolean") x.hasCustomVoice = false;
+
         return x;
       });
     }
+
+    // Remove old voice settings
+    delete merged.settings.voiceGender;
 
     return merged;
   } catch {

@@ -751,3 +751,115 @@ input[type="time"]{
   font-weight: 700;
   letter-spacing: .2px;
 }
+
+/* Voice Recording Styles */
+.recordingControls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btnRecord {
+  background: var(--accent3);
+  color: var(--bg0);
+  border: none;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnRecord:hover:not(:disabled) {
+  background: #10b981;
+  transform: translateY(-1px);
+}
+
+.btnRecord:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recordingActive {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+}
+
+.recordingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #ef4444;
+}
+
+.recordingDot {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.recordingButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.recordingComplete {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: var(--radius-sm);
+}
+
+.recordingInfo {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.recordingError {
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  color: #ef4444;
+  font-size: 14px;
+}
+
+.recordingUnsupported {
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.voiceIndicator {
+  margin-left: 8px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* Update task styles for voice indicator */
+.taskTitle {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: var(--text);
+}

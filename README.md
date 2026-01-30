@@ -1,22 +1,32 @@
-# VK7Days - Voice-Enabled Task Scheduler
+# VK7Days - Personal Voice Task Scheduler
 
-A React-based Progressive Web App (PWA) for scheduling daily tasks with voice reminders and comprehensive analytics tracking.
+A React-based Progressive Web App (PWA) for scheduling daily tasks with personalized voice reminders and comprehensive analytics tracking.
 
 ## Features
 
 - **Daily Task Management**: Organize tasks by day of the week
-- **Voice Reminders**: Text-to-speech alerts with male/female voice options
+- **Personal Voice Reminders**: Record your own voice saying each task title for truly personalized alerts
 - **Smart Notifications**: Browser notifications with background scheduling support
 - **Progressive Web App**: Install on mobile/desktop for offline access
 - **Google Analytics Integration**: Comprehensive event tracking for user interactions
 - **Search & Filter**: Find tasks quickly across your schedule
 - **Responsive Design**: Works seamlessly on all devices
 
-## Voice Reminder System
+## Personal Voice Recording System
 
-- Each task has a **Voice** setting (Male/Female)
-- Alarm repeats the task title using **Text-to-Speech** until you press **Stop**
-- Tap **Test voice** once after opening the app (some browsers require one tap before audio can play)
+- **Record Your Own Voice**: Each task can have a custom voice recording of you saying the task title
+- **Personalized Alarms**: When the alarm triggers, your own recorded voice plays on repeat until you press **Stop**
+- **Easy Recording**: Simply click the microphone button and say your task title
+- **Preview & Edit**: Listen to your recordings and re-record if needed
+- **Visual Indicators**: Tasks with custom voice recordings show a 🎤 icon
+
+### How to Use Voice Recording
+
+1. **Create a Task**: Enter your task title and time
+2. **Record Your Voice**: Click "🎤 Record [your task]" and say the task title clearly
+3. **Preview**: Click "▶ Preview" to hear your recording
+4. **Save**: Your recording is automatically saved with the task
+5. **Alarm Time**: When the time comes, your voice will play repeatedly until stopped
 
 ## Google Analytics Setup
 
@@ -56,9 +66,9 @@ The app automatically tracks these user interactions:
 
 **Voice & Audio**
 
-- Voice gender selection
-- Voice preview plays
-- Alarm triggers and interactions
+- Voice recording start/stop/cancel
+- Voice recording preview plays
+- Custom voice alarm triggers and interactions
 
 **Notifications**
 
@@ -117,16 +127,17 @@ npm run preview
 - **Vite** - Build tool and dev server
 - **PWA** - Progressive Web App capabilities
 - **Google Analytics 4** - User behavior tracking
-- **Web Speech API** - Text-to-speech functionality
+- **MediaRecorder API** - Voice recording functionality
+- **IndexedDB** - Persistent audio storage
 - **Notification API** - Browser notifications
 - **Service Workers** - Background functionality
 
 ## Browser Compatibility
 
-- **Chrome/Edge**: Full feature support including background notifications
-- **Firefox**: Core features supported, limited background notification support
-- **Safari**: Core features supported, notification permissions required
-- **Mobile browsers**: PWA installation and core features supported
+- **Chrome/Edge**: Full feature support including voice recording and background notifications
+- **Firefox**: Core features supported, voice recording available, limited background notification support
+- **Safari**: Core features supported, voice recording may require user permission, notification permissions required
+- **Mobile browsers**: PWA installation and core features supported, voice recording works on modern mobile browsers
 
 ## Privacy & Analytics
 

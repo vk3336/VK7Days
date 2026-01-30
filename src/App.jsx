@@ -3,7 +3,7 @@ import "./styles.css";
 
 import { DAYS, clearAllState, loadState, makeDefaultState, saveState, sortByTime } from "./lib/storage";
 import { ensureNotificationPermission, tick } from "./lib/alarm";
-import { createTtsLooper } from "./lib/tts";
+import { audioStorage, audioPlayer } from "./lib/recorder";
 import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask } from "./lib/notify";
 import { analytics } from "./lib/analytics";
 
@@ -35,12 +35,11 @@ export default function App() {
     saveState(state);
   }, [state]);
 
-  // ✅ Text-to-Speech looper (repeats until Stop)
+  // ✅ Audio player for custom recordings (replaces TTS looper)
   useEffect(() => {
-    ttsRef.current = createTtsLooper({ repeatMs: 4500 });
     return () => {
       try {
-        ttsRef.current?.stop?.();
+        audioPlayer.stopLoop();
       } catch {}
     };
   }, []);
@@ -126,11 +125,17 @@ export default function App() {
           } catch {}
         }
 
-        // Speech loop (runs while app is active)
-        try {
-          const gender = task.voiceGender || state.settings.voiceGender || "female";
-          await ttsRef.current?.start?.({ text: task.title, gender });
-        } catch {}
+        // Play custom recorded audio if available, otherwise fallback to title display
+        if (task.hasCustomVoice) {
+          try {
+            const recording = await audioStorage.getRecording(task.id);
+            if (recording.success && recording.audioUrl) {
+              await audioPlayer.startLoop(recording.audioUrl, 2500);
+            }
+          } catch (error) {
+            console.error("Failed to play custom recording:", error);
+          }
+        }
 
         // Best-effort schedule next occurrence (weekly) for browsers that support Notification Triggers
         try {
@@ -140,7 +145,7 @@ export default function App() {
     }, 5000);
 
     return () => window.clearInterval(id);
-  }, [state.schedule, state.settings.voiceGender]);
+  }, [state.schedule]);
 
   function setActiveDay(dayKey) {
     analytics.dayChanged(dayKey);
@@ -207,7 +212,7 @@ export default function App() {
   function stopAlarm() {
     analytics.alarmStopped();
     try {
-      ttsRef.current?.stop?.();
+      audioPlayer.stopLoop();
     } catch {}
     setAlarmTask(null);
     setAlarmDayKey(null);
@@ -216,10 +221,17 @@ export default function App() {
   async function playAgain() {
     if (!alarmTask) return;
     analytics.alarmPlayAgain();
-    const gender = alarmTask.voiceGender || state.settings.voiceGender || "female";
-    try {
-      await ttsRef.current?.start?.({ text: alarmTask.title, gender });
-    } catch {}
+    
+    if (alarmTask.hasCustomVoice) {
+      try {
+        const recording = await audioStorage.getRecording(alarmTask.id);
+        if (recording.success && recording.audioUrl) {
+          await audioPlayer.startLoop(recording.audioUrl, 2500);
+        }
+      } catch (error) {
+        console.error("Failed to play custom recording:", error);
+      }
+    }
   }
 
   const alarmDayLabel = useMemo(() => DAYS.find((d) => d.key === alarmDayKey)?.label || "", [alarmDayKey]);
@@ -273,14 +285,7 @@ export default function App() {
             </div>
           </div>
 
-          <TaskForm
-            defaultVoiceGender={state.settings.voiceGender}
-            onDefaultVoiceGenderChange={(g) => {
-              analytics.defaultVoiceChanged(g);
-              setState((p) => ({ ...p, settings: { ...p.settings, voiceGender: g } }));
-            }}
-            onAdd={addTask}
-          />
+          <TaskForm onAdd={addTask} />
         </section>
 
         <section className="panel">
@@ -288,7 +293,7 @@ export default function App() {
             <div>
               <div className="panelTitle">Tasks for {dayLabel}</div>
               <div className="panelHint">
-                Speech plays only while the app is running. Enable alerts for notifications when supported.
+                Custom voice recordings play when alarms trigger. Enable alerts for notifications when supported.
               </div>
             </div>
           </div>

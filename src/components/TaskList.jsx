@@ -10,7 +10,10 @@ export default function TaskList({ tasks, onToggle, onDelete, onEdit }) {
           <div className="taskTime">{t.time}</div>
 
           <div className="taskMain">
-            <div className="taskTitle">{t.title}</div>
+            <div className="taskTitle">
+              {t.title}
+              {t.hasCustomVoice && <span className="voiceIndicator">🎤</span>}
+            </div>
             {t.notes ? <div className="taskNotes">{t.notes}</div> : null}
           </div>
 
