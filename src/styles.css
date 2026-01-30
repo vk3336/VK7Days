@@ -586,12 +586,12 @@ body{
 @media (max-width: 420px) {
   body { font-size: 14px; }
 
-  .topBar { padding: 10px 12px; gap: 10px; }
+  .topBar { padding: 20px 12px; gap: 10px; }
 
-  .logo{ width: 36px; height: 36px; border-radius: 14px; }
+  .logo{ width: 45px; height: 45px; border-radius: 14px; }
   .logoImg{ padding: 5px; }
 
-  .brandName { font-size: 14px; }
+  .brandName { font-size: 16px; }
 
   .topActions .btn,
   .topActions .btnPrimary,
