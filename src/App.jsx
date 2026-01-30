@@ -5,6 +5,7 @@ import { DAYS, clearAllState, loadState, makeDefaultState, saveState, sortByTime
 import { ensureNotificationPermission, tick } from "./lib/alarm";
 import { createTtsLooper } from "./lib/tts";
 import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask } from "./lib/notify";
+import { analytics } from "./lib/analytics";
 
 import DayTabs from "./components/DayTabs";
 import TaskForm from "./components/TaskForm";
@@ -57,6 +58,10 @@ export default function App() {
   const filteredTasks = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return tasks;
+    
+    // Track search activity
+    analytics.taskSearched(q);
+    
     return tasks.filter((t) => {
       const hay = `${t.title || ""} ${t.notes || ""} ${t.time || ""}`.toLowerCase();
       return hay.includes(q);
@@ -64,8 +69,17 @@ export default function App() {
   }, [tasks, search]);
 
   async function enableNotifications() {
+    analytics.notificationEnabled();
+    
     const ok = await ensureNotificationPermission();
     setNotifStatus(ok ? "granted" : (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
+
+    // Track permission result
+    if (ok) {
+      analytics.notificationPermissionGranted();
+    } else if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+      analytics.notificationPermissionDenied();
+    }
 
     // Best-effort background scheduling (only on browsers that support Notification Triggers)
     try {
@@ -96,6 +110,9 @@ export default function App() {
   useEffect(() => {
     const id = window.setInterval(() => {
       tick(state.schedule, async (task, dayKey) => {
+        // Track alarm trigger
+        analytics.alarmTriggered(task, dayKey);
+        
         setAlarmTask(task);
         setAlarmDayKey(dayKey);
 
@@ -126,10 +143,12 @@ export default function App() {
   }, [state.schedule, state.settings.voiceGender]);
 
   function setActiveDay(dayKey) {
+    analytics.dayChanged(dayKey);
     setState((p) => ({ ...p, activeDay: dayKey }));
   }
 
   function addTask(task) {
+    analytics.taskAdded(task);
     setState((p) => {
       const list = p.schedule[p.activeDay] || [];
       const next = sortByTime([...list, task]);
@@ -140,6 +159,10 @@ export default function App() {
   function toggleTask(id) {
     setState((p) => {
       const list = p.schedule[p.activeDay] || [];
+      const task = list.find(t => t.id === id);
+      if (task) {
+        analytics.taskToggled(id, !task.enabled);
+      }
       return {
         ...p,
         schedule: {
@@ -151,6 +174,7 @@ export default function App() {
   }
 
   function deleteTask(id) {
+    analytics.taskDeleted(id);
     setState((p) => {
       const list = p.schedule[p.activeDay] || [];
       return { ...p, schedule: { ...p.schedule, [p.activeDay]: list.filter((t) => t.id !== id) } };
@@ -158,6 +182,7 @@ export default function App() {
   }
 
   function saveEdited(updated) {
+    analytics.taskEdited(updated);
     setState((p) => {
       const list = p.schedule[p.activeDay] || [];
       const next = sortByTime(list.map((t) => (t.id === updated.id ? updated : t)));
@@ -168,16 +193,19 @@ export default function App() {
 
   function clearDay() {
     if (!confirm(`Clear all tasks for ${dayLabel}?`)) return;
+    analytics.dayCleared(activeDay);
     setState((p) => ({ ...p, schedule: { ...p.schedule, [p.activeDay]: [] } }));
   }
 
   function resetAll() {
     if (!confirm("Clear ALL days and remove saved data from device?")) return;
+    analytics.allDataReset();
     clearAllState();
     setState(makeDefaultState());
   }
 
   function stopAlarm() {
+    analytics.alarmStopped();
     try {
       ttsRef.current?.stop?.();
     } catch {}
@@ -187,6 +215,7 @@ export default function App() {
 
   async function playAgain() {
     if (!alarmTask) return;
+    analytics.alarmPlayAgain();
     const gender = alarmTask.voiceGender || state.settings.voiceGender || "female";
     try {
       await ttsRef.current?.start?.({ text: alarmTask.title, gender });
@@ -246,7 +275,10 @@ export default function App() {
 
           <TaskForm
             defaultVoiceGender={state.settings.voiceGender}
-            onDefaultVoiceGenderChange={(g) => setState((p) => ({ ...p, settings: { ...p.settings, voiceGender: g } }))}
+            onDefaultVoiceGenderChange={(g) => {
+              analytics.defaultVoiceChanged(g);
+              setState((p) => ({ ...p, settings: { ...p.settings, voiceGender: g } }));
+            }}
             onAdd={addTask}
           />
         </section>
@@ -261,11 +293,17 @@ export default function App() {
             </div>
           </div>
 
-          <TaskList tasks={filteredTasks} onToggle={toggleTask} onDelete={deleteTask} onEdit={setEditTask} />
+          <TaskList tasks={filteredTasks} onToggle={toggleTask} onDelete={deleteTask} onEdit={(task) => {
+            analytics.editModalOpened(task.id);
+            setEditTask(task);
+          }} />
         </section>
       </main>
 
-      <EditTaskModal open={!!editTask} task={editTask} onClose={() => setEditTask(null)} onSave={saveEdited} />
+      <EditTaskModal open={!!editTask} task={editTask} onClose={() => {
+        analytics.editModalClosed();
+        setEditTask(null);
+      }} onSave={saveEdited} />
 
       <AlarmModal open={!!alarmTask} task={alarmTask} dayLabel={alarmDayLabel} onStop={stopAlarm} onPlayAgain={playAgain} />
     </div>

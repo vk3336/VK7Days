@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { uid } from "../lib/storage";
 import { createTtsLooper } from "../lib/tts";
+import { analytics } from "../lib/analytics";
 
 function cleanStr(v) {
   if (v === null || v === undefined) return "";
@@ -55,9 +56,13 @@ export default function TaskForm({ defaultVoiceGender = "female", onDefaultVoice
     setVoiceGender(g);
     onDefaultVoiceGenderChange?.(g);
 
+    // Track voice gender change
+    analytics.voiceGenderChanged(g);
+
     // ✅ Play ONLY one time when user selects voice
     const previewText = cleanStr(title) || (g === "male" ? "Male voice" : "Female voice");
     try {
+      analytics.voicePreview(g);
       await ttsRef.current?.playOnce?.({ text: previewText, gender: g });
     } catch {}
   }
