@@ -5,6 +5,7 @@ import { DAYS, clearAllState, loadState, makeDefaultState, saveState, sortByTime
 import { ensureNotificationPermission, tick } from "./lib/alarm";
 import { audioStorage, audioPlayer } from "./lib/recorder";
 import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask, showBackgroundNotification } from "./lib/notify";
+import { scheduleBackgroundAlarms } from "./lib/backgroundAlarms";
 import { analytics } from "./lib/analytics";
 
 import DayTabs from "./components/DayTabs";
@@ -84,6 +85,21 @@ export default function App() {
               console.error("Failed to play custom recording:", error);
             }
           }
+        } else if (event.data.type === 'REQUEST_SCHEDULE_CHECK') {
+          // Service worker is requesting schedule data for background checking
+          const { currentDay, currentTime } = event.data;
+          
+          // Send schedule data back to service worker
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'SCHEDULE_RESPONSE',
+              data: {
+                schedule: state.schedule,
+                currentDay,
+                currentTime
+              }
+            });
+          }
         }
       });
     }
@@ -154,36 +170,67 @@ export default function App() {
   }, [tasks, search]);
 
   async function enableNotifications() {
+    console.log("Enabling notifications..."); // Debug log
     analytics.notificationEnabled();
     
     const ok = await ensureNotificationPermission();
+    console.log("Notification permission result:", ok); // Debug log
     setNotifStatus(ok ? "granted" : (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
 
     // Track permission result
     if (ok) {
       analytics.notificationPermissionGranted();
+      
+      // Test notification
+      try {
+        new Notification("VK7Days Test", {
+          body: "Notifications are working!",
+          icon: "/icons/vk7.png",
+          requireInteraction: false
+        });
+        console.log("Test notification sent"); // Debug log
+      } catch (error) {
+        console.error("Test notification failed:", error);
+      }
     } else if (typeof Notification !== "undefined" && Notification.permission === "denied") {
       analytics.notificationPermissionDenied();
     }
 
-    // Best-effort background scheduling (only on browsers that support Notification Triggers)
+    // Best-effort background scheduling
     try {
-      if (ok) await syncAllTriggeredNotifications(state.schedule);
-    } catch {}
+      if (ok) {
+        console.log("Scheduling background alarms..."); // Debug log
+        const bgResult = await scheduleBackgroundAlarms(state.schedule);
+        console.log("Background scheduling result:", bgResult); // Debug log
+        
+        // Fallback to original method
+        await syncAllTriggeredNotifications(state.schedule);
+      }
+    } catch (error) {
+      console.error("Background scheduling failed:", error);
+    }
   }
 
   // When permission is already granted, keep background schedule updated.
   useEffect(() => {
     if (typeof Notification === "undefined") return;
     if (Notification.permission !== "granted") return;
-    if (!canScheduleTriggeredNotifications()) return;
 
     let cancelled = false;
     (async () => {
       try {
-        const res = await syncAllTriggeredNotifications(state.schedule);
-        if (!cancelled && res?.ok) setNotifStatus("granted");
-      } catch {}
+        // Use enhanced background alarm scheduling
+        const bgResult = await scheduleBackgroundAlarms(state.schedule);
+        console.log("Background alarms scheduled:", bgResult);
+        
+        // Fallback to original method if available
+        if (canScheduleTriggeredNotifications()) {
+          const res = await syncAllTriggeredNotifications(state.schedule);
+          if (!cancelled && res?.ok) setNotifStatus("granted");
+        }
+      } catch (error) {
+        console.error("Failed to schedule background alarms:", error);
+      }
     })();
 
     return () => {
@@ -191,7 +238,7 @@ export default function App() {
     };
   }, [state.schedule]);
 
-  // Alarm ticker (checks every 5s)
+  // Alarm ticker (checks every 5s) + Enhanced background notification support
   useEffect(() => {
     const id = window.setInterval(() => {
       tick(state.schedule, async (task, dayKey) => {
@@ -204,24 +251,34 @@ export default function App() {
         const ok = await ensureNotificationPermission();
         setNotifStatus(ok ? "granted" : (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
 
-        // Foreground notification (immediate) - try background notification first
+        // Enhanced notification system - try multiple approaches
         if (ok) {
           try {
-            // Use background notification for better support when app is closed
+            // First try: Use service worker for background notifications
             const bgResult = await showBackgroundNotification(task, dayKey);
             if (!bgResult.ok) {
-              // Fallback to regular notification
-              new Notification("VK7Days Reminder", { body: `${task.title} (${task.time})`, requireInteraction: true });
+              // Fallback: Regular notification
+              new Notification("VK7Days Reminder", { 
+                body: `${task.title} (${task.time})`, 
+                requireInteraction: true,
+                icon: "/icons/vk7.png",
+                tag: `vk7_${task.id}`,
+                renotify: true
+              });
             }
           } catch {
             // Final fallback
             try {
-              new Notification("VK7Days Reminder", { body: `${task.title} (${task.time})`, requireInteraction: true });
+              new Notification("VK7Days Reminder", { 
+                body: `${task.title} (${task.time})`, 
+                requireInteraction: true,
+                icon: "/icons/vk7.png"
+              });
             } catch {}
           }
         }
 
-        // Play custom recorded audio if available, otherwise fallback to title display
+        // Play custom recorded audio if available
         if (task.hasCustomVoice) {
           try {
             const recording = await audioStorage.getRecording(task.id);
@@ -306,6 +363,7 @@ export default function App() {
   }
 
   function stopAlarm() {
+    console.log("stopAlarm called"); // Debug log
     analytics.alarmStopped();
     try {
       audioPlayer.stopLoop();
@@ -315,6 +373,7 @@ export default function App() {
   }
 
   async function playAgain() {
+    console.log("playAgain called"); // Debug log
     if (!alarmTask) return;
     analytics.alarmPlayAgain();
     

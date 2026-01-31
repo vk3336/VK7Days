@@ -2,6 +2,16 @@ import React from "react";
 import Modal from "./Modal";
 
 export default function AlarmModal({ open, task, dayLabel, onStop, onPlayAgain }) {
+  const handleStop = () => {
+    console.log("AlarmModal: Stop button clicked"); // Debug log
+    onStop();
+  };
+
+  const handlePlayAgain = () => {
+    console.log("AlarmModal: Play again button clicked"); // Debug log
+    onPlayAgain();
+  };
+
   return (
     <Modal open={open} title="⏰ Reminder" onClose={onStop}>
       <div className="alarmBox">
@@ -19,10 +29,10 @@ export default function AlarmModal({ open, task, dayLabel, onStop, onPlayAgain }
         {task?.notes ? <div className="alarmNotes">{task.notes}</div> : null}
 
         <div className="actionsRow" style={{ marginTop: 14 }}>
-          <button className="btn" type="button" onClick={onPlayAgain}>
+          <button className="btn" type="button" onClick={handlePlayAgain}>
             {task?.hasCustomVoice ? "Play recording" : "Play again"}
           </button>
-          <button className="btnPrimary" type="button" onClick={onStop}>Stop</button>
+          <button className="btnPrimary" type="button" onClick={handleStop}>Stop</button>
         </div>
       </div>
     </Modal>
