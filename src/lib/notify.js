@@ -20,10 +20,17 @@ function saveMap(map) {
 }
 
 function dayIndex(dayKey) {
-  const map = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+  const map = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
   return map.indexOf(String(dayKey || "").toLowerCase());
 }
-
 
 /**
  * Returns next occurrence timestamp (ms) for the given weekly day + HH:MM.
@@ -63,6 +70,7 @@ export function canScheduleTriggeredNotifications() {
  * Best-effort scheduling:
  * - If Notification Trigger API is supported, schedule a system notification at the next occurrence.
  * - Uses a stable `tag` per task to reduce duplicates (when supported).
+ * - Enhanced with service worker support for background notifications.
  *
  * IMPORTANT: Browsers do NOT allow background TTS audio. This schedules notifications only.
  */
@@ -70,9 +78,12 @@ export async function scheduleTriggeredNotificationForTask(task, dayKey) {
   if (!task?.id || !task?.time) return { ok: false, reason: "missing_task" };
   if (!task?.enabled) return { ok: false, reason: "disabled" };
 
-  if (!canScheduleTriggeredNotifications()) return { ok: false, reason: "not_supported" };
-  if (typeof Notification === "undefined") return { ok: false, reason: "no_notification" };
-  if (Notification.permission !== "granted") return { ok: false, reason: "no_permission" };
+  if (!canScheduleTriggeredNotifications())
+    return { ok: false, reason: "not_supported" };
+  if (typeof Notification === "undefined")
+    return { ok: false, reason: "no_notification" };
+  if (Notification.permission !== "granted")
+    return { ok: false, reason: "no_permission" };
 
   const ts = nextOccurrenceTimestampMs(dayKey, task.time, new Date());
   if (!ts) return { ok: false, reason: "bad_time" };
@@ -84,12 +95,34 @@ export async function scheduleTriggeredNotificationForTask(task, dayKey) {
   try {
     const reg = await navigator.serviceWorker.ready;
     const trigger = new window.TimestampTrigger(ts);
+
+    // Enhanced notification with data for service worker
     await reg.showNotification("VK7Days Reminder", {
       body: `${cleanStr(task.title)} (${task.time})`,
       tag: `vk7_${task.id}`,
       renotify: true,
       requireInteraction: true,
+      icon: "/icons/vk7.png",
+      badge: "/icons/vk7.png",
       showTrigger: trigger,
+      data: {
+        taskId: task.id,
+        dayKey: dayKey,
+        taskTitle: cleanStr(task.title),
+        taskTime: task.time,
+        hasCustomVoice: task.hasCustomVoice || false,
+      },
+      actions: [
+        {
+          action: "open",
+          title: "Open App",
+          icon: "/icons/vk7.png",
+        },
+        {
+          action: "dismiss",
+          title: "Dismiss",
+        },
+      ],
     });
 
     map[key] = ts;
@@ -100,16 +133,20 @@ export async function scheduleTriggeredNotificationForTask(task, dayKey) {
   }
 }
 
-
 export async function syncAllTriggeredNotifications(scheduleByDay) {
-  if (!canScheduleTriggeredNotifications()) return { ok: false, reason: "not_supported" };
-  if (typeof Notification === "undefined") return { ok: false, reason: "no_notification" };
-  if (Notification.permission !== "granted") return { ok: false, reason: "no_permission" };
+  if (!canScheduleTriggeredNotifications())
+    return { ok: false, reason: "not_supported" };
+  if (typeof Notification === "undefined")
+    return { ok: false, reason: "no_notification" };
+  if (Notification.permission !== "granted")
+    return { ok: false, reason: "no_permission" };
 
   const results = [];
   const dayKeys = Object.keys(scheduleByDay || {});
   for (const dayKey of dayKeys) {
-    const list = Array.isArray(scheduleByDay?.[dayKey]) ? scheduleByDay[dayKey] : [];
+    const list = Array.isArray(scheduleByDay?.[dayKey])
+      ? scheduleByDay[dayKey]
+      : [];
     for (const task of list) {
       // eslint-disable-next-line no-await-in-loop
       const r = await scheduleTriggeredNotificationForTask(task, dayKey);
@@ -118,4 +155,64 @@ export async function syncAllTriggeredNotifications(scheduleByDay) {
   }
 
   return { ok: true, results };
+}
+/**
+ * Show immediate notification through service worker (for background notifications)
+ * This works even when the app is closed/minimized
+ */
+export async function showBackgroundNotification(task, dayKey) {
+  if (!task?.id || !task?.time) return { ok: false, reason: "missing_task" };
+  if (typeof Notification === "undefined")
+    return { ok: false, reason: "no_notification" };
+  if (Notification.permission !== "granted")
+    return { ok: false, reason: "no_permission" };
+
+  try {
+    // Check if service worker is available
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+
+      // Show notification through service worker for background support
+      await reg.showNotification("VK7Days Reminder", {
+        body: `${cleanStr(task.title)} (${task.time})`,
+        tag: `vk7_${task.id}`,
+        renotify: true,
+        requireInteraction: true,
+        icon: "/icons/vk7.png",
+        badge: "/icons/vk7.png",
+        data: {
+          taskId: task.id,
+          dayKey: dayKey,
+          taskTitle: cleanStr(task.title),
+          taskTime: task.time,
+          hasCustomVoice: task.hasCustomVoice || false,
+        },
+        actions: [
+          {
+            action: "open",
+            title: "Open App",
+            icon: "/icons/vk7.png",
+          },
+          {
+            action: "dismiss",
+            title: "Dismiss",
+          },
+        ],
+      });
+
+      return { ok: true, method: "service_worker" };
+    } else {
+      // Fallback to regular notification
+      new Notification("VK7Days Reminder", {
+        body: `${cleanStr(task.title)} (${task.time})`,
+        requireInteraction: true,
+        icon: "/icons/vk7.png",
+      });
+
+      return { ok: true, method: "regular" };
+    }
+  } catch (error) {
+    console.error("Background notification failed:", error);
+    return { ok: false, reason: "notification_failed", error: error.message };
+  }
 }

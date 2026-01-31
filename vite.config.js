@@ -9,10 +9,7 @@ export default defineConfig({
       registerType: "autoUpdate",
 
       // ✅ cache public assets (mp3 + index.json) for PWA/offline
-      includeAssets: [
-        "icons/icon-192.png",
-        "icons/icon-512.png",
-        "icons/vk7.png",      ],
+      includeAssets: ["icons/vk7.png"],
 
       manifest: {
         name: "VK7Days",
@@ -23,10 +20,11 @@ export default defineConfig({
         background_color: "#0b1220",
         theme_color: "#0b1220",
         icons: [
-          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icons/vk7.png", sizes: "192x192", type: "image/png" },
+          { src: "/icons/vk7.png", sizes: "512x512", type: "image/png" },
         ],
       },
     }),
   ],
+  publicDir: "public",
 });

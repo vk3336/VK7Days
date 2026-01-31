@@ -4,7 +4,7 @@ import "./styles.css";
 import { DAYS, clearAllState, loadState, makeDefaultState, saveState, sortByTime } from "./lib/storage";
 import { ensureNotificationPermission, tick } from "./lib/alarm";
 import { audioStorage, audioPlayer } from "./lib/recorder";
-import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask } from "./lib/notify";
+import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask, showBackgroundNotification } from "./lib/notify";
 import { analytics } from "./lib/analytics";
 
 import DayTabs from "./components/DayTabs";
@@ -42,6 +42,92 @@ export default function App() {
         audioPlayer.stopLoop();
       } catch {}
     };
+  }, []);
+
+  // ✅ Service Worker registration and message handling
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      // Register our custom service worker for notifications
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('Custom SW registered:', registration);
+        })
+        .catch(error => {
+          console.log('Custom SW registration failed:', error);
+        });
+
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener('message', async (event) => {
+        if (event.data.type === 'TRIGGER_ALARM') {
+          const { taskId, dayKey, taskTitle, taskTime, hasCustomVoice } = event.data;
+          
+          // Create task object for alarm modal
+          const task = {
+            id: taskId,
+            title: taskTitle,
+            time: taskTime,
+            hasCustomVoice: hasCustomVoice
+          };
+          
+          // Trigger alarm modal
+          setAlarmTask(task);
+          setAlarmDayKey(dayKey);
+          
+          // Play audio if available
+          if (hasCustomVoice) {
+            try {
+              const recording = await audioStorage.getRecording(taskId);
+              if (recording.success && recording.audioUrl) {
+                await audioPlayer.startLoop(recording.audioUrl, 2500);
+              }
+            } catch (error) {
+              console.error("Failed to play custom recording:", error);
+            }
+          }
+        }
+      });
+    }
+
+    // Handle URL parameters for alarm (when app is opened from notification)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('alarm') === 'true') {
+      const taskId = urlParams.get('taskId');
+      const dayKey = urlParams.get('dayKey');
+      const taskTitle = urlParams.get('taskTitle');
+      const taskTime = urlParams.get('taskTime');
+      const hasCustomVoice = urlParams.get('hasCustomVoice') === 'true';
+      
+      if (taskId && dayKey && taskTitle && taskTime) {
+        // Create task object for alarm modal
+        const task = {
+          id: taskId,
+          title: taskTitle,
+          time: taskTime,
+          hasCustomVoice: hasCustomVoice
+        };
+        
+        // Trigger alarm modal
+        setAlarmTask(task);
+        setAlarmDayKey(dayKey);
+        
+        // Play audio if available
+        if (hasCustomVoice) {
+          setTimeout(async () => {
+            try {
+              const recording = await audioStorage.getRecording(taskId);
+              if (recording.success && recording.audioUrl) {
+                await audioPlayer.startLoop(recording.audioUrl, 2500);
+              }
+            } catch (error) {
+              console.error("Failed to play custom recording:", error);
+            }
+          }, 500);
+        }
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
 
   const visibleDays = useMemo(() => {
@@ -118,11 +204,21 @@ export default function App() {
         const ok = await ensureNotificationPermission();
         setNotifStatus(ok ? "granted" : (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
 
-        // Foreground notification (immediate)
+        // Foreground notification (immediate) - try background notification first
         if (ok) {
           try {
-            new Notification("VK7Days Reminder", { body: `${task.title} (${task.time})`, requireInteraction: true });
-          } catch {}
+            // Use background notification for better support when app is closed
+            const bgResult = await showBackgroundNotification(task, dayKey);
+            if (!bgResult.ok) {
+              // Fallback to regular notification
+              new Notification("VK7Days Reminder", { body: `${task.title} (${task.time})`, requireInteraction: true });
+            }
+          } catch {
+            // Final fallback
+            try {
+              new Notification("VK7Days Reminder", { body: `${task.title} (${task.time})`, requireInteraction: true });
+            } catch {}
+          }
         }
 
         // Play custom recorded audio if available, otherwise fallback to title display
