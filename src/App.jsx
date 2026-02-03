@@ -557,7 +557,7 @@ export default function App() {
             <img className="logoImg" src="/icons/vk7.png" alt="VK7Days" />
           </div>
           <div>
-            <div className="brandName">VK7Days - Task Scheduler</div>
+            <div className="brandName">VK7Days</div>
             <div className="brandSub">
               {notifStatus === "granted" ? "✅ Notifications: ON" : notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
               {canBgSchedule ? " • Background alarms supported" : ""}
