@@ -499,9 +499,6 @@ export default function App() {
           >
             📱 Install App
           </a>
-          <button className="btnDanger" type="button" onClick={resetAll}>
-            Reset all
-          </button>
         </div>
       </header>
 

@@ -1,12 +1,52 @@
 {
-  "name": "VK7Days",
+  "name": "VK7Days - Daily Task Scheduler",
   "short_name": "VK7Days",
+  "description": "A powerful daily task scheduler with voice recording and alarm notifications",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#0b1220",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#22d3ee",
+  "categories": ["productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
-    { "src": "/icons/vk7.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/vk7.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icons/vk7.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/vk7.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/vk7.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "Add Task",
+      "short_name": "Add Task",
+      "description": "Quickly add a new task",
+      "url": "/?action=add",
+      "icons": [
+        {
+          "src": "/icons/vk7.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }
