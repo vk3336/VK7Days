@@ -7,12 +7,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,mp3}"],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB for audio files
+        runtimeCaching: [],
+      },
 
       // ✅ cache public assets (mp3 + index.json) for PWA/offline
-      includeAssets: [
-        "icons/icon-192.png",
-        "icons/icon-512.png",
-        "icons/vk7.png",      ],
+      includeAssets: ["icons/vk7.png", "ringtone/Dholida.mp3"],
 
       manifest: {
         name: "VK7Days",
@@ -23,8 +25,8 @@ export default defineConfig({
         background_color: "#0b1220",
         theme_color: "#0b1220",
         icons: [
-          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icons/vk7.png", sizes: "192x192", type: "image/png" },
+          { src: "/icons/vk7.png", sizes: "512x512", type: "image/png" },
         ],
       },
     }),

@@ -44,6 +44,84 @@ export default function App() {
     };
   }, []);
 
+  // Service Worker registration and message handling
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      // Register the custom service worker for background alarms
+      navigator.serviceWorker.register('/sw-custom.js').catch(console.error);
+      
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener('message', async (event) => {
+        const { type, alarmId, customAudioUrl, alarm } = event.data || {};
+        
+        if (type === 'PLAY_CUSTOM_ALARM' && alarmId && customAudioUrl) {
+          try {
+            await audioPlayer.startLoop(customAudioUrl, 2500);
+          } catch (error) {
+            console.error('Failed to play custom alarm audio:', error);
+          }
+        }
+        
+        if (type === 'ALARM_TRIGGERED' && alarm) {
+          // Set alarm modal for foreground display
+          setAlarmTask(alarm);
+          setAlarmDayKey(alarm.day);
+          
+          // Play custom audio if available
+          if (alarm.hasCustomVoice) {
+            try {
+              const recording = await audioStorage.getRecording(alarm.id);
+              if (recording.success && recording.audioUrl) {
+                await audioPlayer.startLoop(recording.audioUrl, 2500);
+              }
+            } catch (error) {
+              console.error('Failed to play custom recording:', error);
+            }
+          }
+        }
+      });
+    }
+  }, []);
+
+  // Sync alarms with service worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      // Wait for service worker to be ready
+      navigator.serviceWorker.ready.then((registration) => {
+        const alarms = {};
+        
+        // Convert schedule to alarm format for service worker
+        Object.entries(state.schedule).forEach(([day, tasks]) => {
+          tasks.forEach(task => {
+            if (task.enabled) {
+              alarms[task.id] = {
+                id: task.id,
+                title: task.title,
+                time: task.time,
+                day: day,
+                enabled: task.enabled,
+                hasCustomVoice: task.hasCustomVoice,
+                customAudioUrl: task.hasCustomVoice ? `/recordings/${task.id}.webm` : null
+              };
+            }
+          });
+        });
+        
+        // Send to custom service worker
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(reg => {
+            if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+              reg.active.postMessage({
+                type: 'SCHEDULE_ALARMS',
+                data: { alarms }
+              });
+            }
+          });
+        });
+      });
+    }
+  }, [state.schedule]);
+
   const visibleDays = useMemo(() => {
     if (state.settings.showSunday) return DAYS;
     return DAYS.filter((d) => d.key !== "sunday");
@@ -167,6 +245,38 @@ export default function App() {
       const task = list.find(t => t.id === id);
       if (task) {
         analytics.taskToggled(id, !task.enabled);
+        
+        // Update service worker
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(reg => {
+            if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+              if (!task.enabled) {
+                // Task being enabled - update alarm
+                reg.active.postMessage({
+                  type: 'UPDATE_ALARM',
+                  data: {
+                    id: task.id,
+                    alarm: {
+                      id: task.id,
+                      title: task.title,
+                      time: task.time,
+                      day: p.activeDay,
+                      enabled: true,
+                      hasCustomVoice: task.hasCustomVoice,
+                      customAudioUrl: task.hasCustomVoice ? `/recordings/${task.id}.webm` : null
+                    }
+                  }
+                });
+              } else {
+                // Task being disabled - remove alarm
+                reg.active.postMessage({
+                  type: 'DELETE_ALARM',
+                  data: { id: task.id }
+                });
+              }
+            }
+          });
+        });
       }
       return {
         ...p,
@@ -180,6 +290,19 @@ export default function App() {
 
   function deleteTask(id) {
     analytics.taskDeleted(id);
+    
+    // Update service worker
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(reg => {
+        if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+          reg.active.postMessage({
+            type: 'DELETE_ALARM',
+            data: { id }
+          });
+        }
+      });
+    });
+    
     setState((p) => {
       const list = p.schedule[p.activeDay] || [];
       return { ...p, schedule: { ...p.schedule, [p.activeDay]: list.filter((t) => t.id !== id) } };
@@ -188,6 +311,32 @@ export default function App() {
 
   function saveEdited(updated) {
     analytics.taskEdited(updated);
+    
+    // Update service worker
+    if (updated.enabled) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => {
+          if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+            reg.active.postMessage({
+              type: 'UPDATE_ALARM',
+              data: {
+                id: updated.id,
+                alarm: {
+                  id: updated.id,
+                  title: updated.title,
+                  time: updated.time,
+                  day: activeDay,
+                  enabled: updated.enabled,
+                  hasCustomVoice: updated.hasCustomVoice,
+                  customAudioUrl: updated.hasCustomVoice ? `/recordings/${updated.id}.webm` : null
+                }
+              }
+            });
+          }
+        });
+      });
+    }
+    
     setState((p) => {
       const list = p.schedule[p.activeDay] || [];
       const next = sortByTime(list.map((t) => (t.id === updated.id ? updated : t)));
@@ -211,6 +360,18 @@ export default function App() {
 
   function stopAlarm() {
     analytics.alarmStopped();
+    
+    // Stop service worker alarm
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(reg => {
+        if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+          reg.active.postMessage({
+            type: 'STOP_ALARM'
+          });
+        }
+      });
+    });
+    
     try {
       audioPlayer.stopLoop();
     } catch {}
