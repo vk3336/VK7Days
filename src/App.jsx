@@ -491,6 +491,14 @@ export default function App() {
           <button className="btn" type="button" onClick={enableNotifications}>
             Enable alerts
           </button>
+          <a 
+            href="/downloads/VK7Days.apk" 
+            download="VK7Days.apk"
+            className="btn"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            📱 Install App
+          </a>
           <button className="btnDanger" type="button" onClick={resetAll}>
             Reset all
           </button>
