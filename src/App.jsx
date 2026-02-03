@@ -59,15 +59,48 @@ export default function App() {
       // Register our custom service worker
       navigator.serviceWorker.register('/sw-custom.js', { scope: '/' })
         .then(registration => {
-          console.log('Custom SW registered:', registration);
+          console.log('✅ Custom SW registered:', registration);
+          
+          // Wait for service worker to be ready
+          return navigator.serviceWorker.ready;
+        })
+        .then(registration => {
+          console.log('✅ Service worker ready:', registration);
+          
+          // Send initial alarm data
+          if (registration.active) {
+            const alarms = {};
+            Object.entries(state.schedule).forEach(([day, tasks]) => {
+              tasks.forEach(task => {
+                if (task.enabled) {
+                  alarms[task.id] = {
+                    id: task.id,
+                    title: task.title,
+                    time: task.time,
+                    day: day,
+                    enabled: task.enabled,
+                    hasCustomVoice: task.hasCustomVoice,
+                    customAudioUrl: task.hasCustomVoice ? `/recordings/${task.id}.webm` : null
+                  };
+                }
+              });
+            });
+            
+            registration.active.postMessage({
+              type: 'SCHEDULE_ALARMS',
+              data: { alarms }
+            });
+            console.log('✅ Alarms sent to service worker:', alarms);
+          }
         })
         .catch(error => {
-          console.error('Custom SW registration failed:', error);
+          console.error('❌ Custom SW registration failed:', error);
         });
       
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', async (event) => {
         const { type, alarmId, customAudioUrl, alarm } = event.data || {};
+        console.log('📨 Message from SW:', event.data);
         
         if (type === 'PLAY_CUSTOM_ALARM' && alarmId && customAudioUrl) {
           try {
