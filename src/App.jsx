@@ -47,8 +47,23 @@ export default function App() {
   // Service Worker registration and message handling
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      // Register the custom service worker for background alarms
-      navigator.serviceWorker.register('/sw-custom.js').catch(console.error);
+      // Unregister any existing service workers first
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          if (registration.active && registration.active.scriptURL.includes('sw.js')) {
+            registration.unregister();
+          }
+        });
+      });
+
+      // Register our custom service worker
+      navigator.serviceWorker.register('/sw-custom.js', { scope: '/' })
+        .then(registration => {
+          console.log('Custom SW registered:', registration);
+        })
+        .catch(error => {
+          console.error('Custom SW registration failed:', error);
+        });
       
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', async (event) => {
@@ -148,14 +163,28 @@ export default function App() {
   async function enableNotifications() {
     analytics.notificationEnabled();
     
+    // Check if notifications are supported
+    if (typeof Notification === "undefined") {
+      alert("Notifications are not supported in this browser");
+      return;
+    }
+
+    // If already denied, show instructions
+    if (Notification.permission === "denied") {
+      alert("Notifications are blocked. Please:\n1. Click the 🔒 lock icon in address bar\n2. Allow notifications\n3. Refresh the page");
+      return;
+    }
+
     const ok = await ensureNotificationPermission();
     setNotifStatus(ok ? "granted" : (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
 
     // Track permission result
     if (ok) {
       analytics.notificationPermissionGranted();
+      alert("✅ Notifications enabled! Background alarms will now work even when app is closed.");
     } else if (typeof Notification !== "undefined" && Notification.permission === "denied") {
       analytics.notificationPermissionDenied();
+      alert("❌ Notifications blocked. Please allow notifications in browser settings and refresh the page.");
     }
 
     // Best-effort background scheduling (only on browsers that support Notification Triggers)
