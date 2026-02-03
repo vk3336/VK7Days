@@ -122,6 +122,8 @@ export default function App() {
           });
         });
         
+        console.log('Sending alarms to service worker:', alarms);
+        
         // Send to custom service worker
         navigator.serviceWorker.getRegistrations().then(registrations => {
           registrations.forEach(reg => {
@@ -133,6 +135,14 @@ export default function App() {
             }
           });
         });
+        
+        // Also try sending to controller if available
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SCHEDULE_ALARMS',
+            data: { alarms }
+          });
+        }
       });
     }
   }, [state.schedule]);

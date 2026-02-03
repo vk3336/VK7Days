@@ -8,93 +8,52 @@ const DEFAULT_RINGTONE = "/ringtone/Dholida.mp3";
 let currentAlarmAudio = null;
 let alarmInterval = null;
 let isPlayingDefaultRingtone = false;
+let alarmCheckInterval = null;
 
-// IndexedDB for persistent storage in service worker
-let db = null;
-
-async function initDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("VK7DaysDB", 1);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      db = request.result;
-      resolve(db);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains("alarms")) {
-        db.createObjectStore("alarms", { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains("fired")) {
-        db.createObjectStore("fired", { keyPath: "key" });
-      }
-    };
-  });
+// Use localStorage for service worker storage (simpler than IndexedDB)
+function getStoredAlarms() {
+  try {
+    const stored = self.localStorage?.getItem(ALARM_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    // Fallback to a simple in-memory storage
+    return self.alarmsCache || {};
+  }
 }
 
-async function getStoredAlarms() {
-  if (!db) await initDB();
-
-  return new Promise((resolve) => {
-    const transaction = db.transaction(["alarms"], "readonly");
-    const store = transaction.objectStore("alarms");
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const alarms = {};
-      request.result.forEach((alarm) => {
-        alarms[alarm.id] = alarm;
-      });
-      resolve(alarms);
-    };
-
-    request.onerror = () => resolve({});
-  });
+function storeAlarms(alarms) {
+  try {
+    if (self.localStorage) {
+      self.localStorage.setItem(ALARM_STORAGE_KEY, JSON.stringify(alarms));
+    }
+    // Also keep in memory as backup
+    self.alarmsCache = alarms;
+  } catch {
+    self.alarmsCache = alarms;
+  }
 }
 
-async function storeAlarms(alarms) {
-  if (!db) await initDB();
-
-  const transaction = db.transaction(["alarms"], "readwrite");
-  const store = transaction.objectStore("alarms");
-
-  // Clear existing alarms
-  await store.clear();
-
-  // Store new alarms
-  Object.values(alarms).forEach((alarm) => {
-    store.put(alarm);
-  });
+function getFiredAlarms() {
+  try {
+    const stored = self.localStorage?.getItem(FIRED_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return self.firedCache || {};
+  }
 }
 
-async function getFiredAlarms() {
-  if (!db) await initDB();
-
-  return new Promise((resolve) => {
-    const transaction = db.transaction(["fired"], "readonly");
-    const store = transaction.objectStore("fired");
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const fired = {};
-      request.result.forEach((item) => {
-        fired[item.key] = true;
-      });
-      resolve(fired);
-    };
-
-    request.onerror = () => resolve({});
-  });
-}
-
-async function markAlarmFired(fireKey) {
-  if (!db) await initDB();
-
-  const transaction = db.transaction(["fired"], "readwrite");
-  const store = transaction.objectStore("fired");
-  store.put({ key: fireKey, timestamp: Date.now() });
+function markAlarmFired(fireKey) {
+  try {
+    const fired = getFiredAlarms();
+    fired[fireKey] = true;
+    if (self.localStorage) {
+      self.localStorage.setItem(FIRED_KEY, JSON.stringify(fired));
+    }
+    self.firedCache = fired;
+  } catch {
+    if (!self.firedCache) self.firedCache = {};
+    self.firedCache[fireKey] = true;
+  }
 }
 
 function todayKey() {
@@ -134,6 +93,9 @@ async function playAlarmAudio(audioUrl, isDefault = false) {
     const audio = new Audio(audioUrl);
     currentAlarmAudio = audio;
 
+    // Set volume to maximum
+    audio.volume = 1.0;
+
     const playAudio = () => {
       if (currentAlarmAudio === audio) {
         audio.currentTime = 0;
@@ -146,6 +108,8 @@ async function playAlarmAudio(audioUrl, isDefault = false) {
 
     // Repeat every 2.5 seconds
     alarmInterval = setInterval(playAudio, 2500);
+
+    console.log("Playing alarm audio:", audioUrl, "isDefault:", isDefault);
   } catch (error) {
     console.error("Failed to play alarm audio:", error);
   }
@@ -163,16 +127,23 @@ function stopAlarmAudio() {
   }
 
   isPlayingDefaultRingtone = false;
+  console.log("Stopped alarm audio");
 }
 
 // Check for due alarms
-async function checkAlarms() {
+function checkAlarms() {
   try {
-    const alarms = await getStoredAlarms();
+    const alarms = getStoredAlarms();
     const day = todayKey();
     const hhmm = hhmmNow();
-    const fired = await getFiredAlarms();
+    const fired = getFiredAlarms();
     const base = `${ymd(new Date())}_${day}_${hhmm}`;
+
+    console.log("Checking alarms:", {
+      day,
+      hhmm,
+      alarmsCount: Object.keys(alarms).length,
+    });
 
     for (const [taskId, alarm] of Object.entries(alarms)) {
       if (!alarm.enabled || alarm.day !== day || alarm.time !== hhmm) continue;
@@ -180,8 +151,9 @@ async function checkAlarms() {
       const fireKey = `${base}_${taskId}`;
       if (fired[fireKey]) continue;
 
-      await markAlarmFired(fireKey);
-      await triggerAlarm(alarm);
+      console.log("Triggering alarm:", alarm);
+      markAlarmFired(fireKey);
+      triggerAlarm(alarm);
     }
   } catch (error) {
     console.error("Error checking alarms:", error);
@@ -190,6 +162,8 @@ async function checkAlarms() {
 
 async function triggerAlarm(alarm) {
   try {
+    console.log("Alarm triggered:", alarm.title, alarm.time);
+
     // Show notification
     const notificationOptions = {
       body: `${alarm.title} (${alarm.time})`,
@@ -209,7 +183,7 @@ async function triggerAlarm(alarm) {
     };
 
     await self.registration.showNotification(
-      "VK7Days Reminder",
+      "🔔 VK7Days Reminder",
       notificationOptions,
     );
 
@@ -222,11 +196,15 @@ async function triggerAlarm(alarm) {
       (client) => client.visibilityState === "visible",
     );
 
+    console.log("App is open:", isAppOpen);
+
     if (!isAppOpen) {
       // App is closed - play default ringtone
+      console.log("App closed - playing default ringtone");
       await playAlarmAudio(DEFAULT_RINGTONE, true);
     } else {
       // App is open - send message to play custom audio
+      console.log("App open - sending message to play custom audio");
       clients.forEach((client) => {
         client.postMessage({
           type: "ALARM_TRIGGERED",
@@ -241,6 +219,7 @@ async function triggerAlarm(alarm) {
 
 // Handle notification clicks
 self.addEventListener("notificationclick", async (event) => {
+  console.log("Notification clicked:", event.action);
   event.notification.close();
 
   const { alarmId, hasCustomVoice, customAudioUrl } =
@@ -281,12 +260,15 @@ self.addEventListener("notificationclick", async (event) => {
 });
 
 // Handle messages from main app
-self.addEventListener("message", async (event) => {
+self.addEventListener("message", (event) => {
   const { type, data } = event.data || {};
+
+  console.log("Service worker received message:", type, data);
 
   switch (type) {
     case "SCHEDULE_ALARMS":
-      await storeAlarms(data.alarms);
+      storeAlarms(data.alarms);
+      console.log("Alarms scheduled:", Object.keys(data.alarms).length);
       break;
 
     case "STOP_ALARM":
@@ -294,28 +276,53 @@ self.addEventListener("message", async (event) => {
       break;
 
     case "UPDATE_ALARM":
-      const alarms = await getStoredAlarms();
+      const alarms = getStoredAlarms();
       alarms[data.id] = data.alarm;
-      await storeAlarms(alarms);
+      storeAlarms(alarms);
+      console.log("Alarm updated:", data.id);
       break;
 
     case "DELETE_ALARM":
-      const currentAlarms = await getStoredAlarms();
+      const currentAlarms = getStoredAlarms();
       delete currentAlarms[data.id];
-      await storeAlarms(currentAlarms);
+      storeAlarms(currentAlarms);
+      console.log("Alarm deleted:", data.id);
       break;
   }
 });
 
-// Check alarms every minute
-setInterval(checkAlarms, 60000);
+// Start checking alarms every 30 seconds (more frequent)
+function startAlarmChecker() {
+  if (alarmCheckInterval) {
+    clearInterval(alarmCheckInterval);
+  }
 
-// Also check on service worker activation
-self.addEventListener("activate", (event) => {
-  event.waitUntil(checkAlarms());
-});
+  // Check immediately
+  checkAlarms();
 
-// Initialize DB on install
+  // Then check every 30 seconds
+  alarmCheckInterval = setInterval(checkAlarms, 30000);
+  console.log("Alarm checker started - checking every 30 seconds");
+}
+
+// Service worker lifecycle events
 self.addEventListener("install", (event) => {
-  event.waitUntil(initDB());
+  console.log("Service worker installing");
+  self.skipWaiting();
+  startAlarmChecker();
 });
+
+self.addEventListener("activate", (event) => {
+  console.log("Service worker activated");
+  event.waitUntil(self.clients.claim());
+  startAlarmChecker();
+});
+
+// Keep service worker alive
+self.addEventListener("fetch", (event) => {
+  // Just pass through all requests
+  event.respondWith(fetch(event.request));
+});
+
+// Start alarm checker when service worker loads
+startAlarmChecker();
