@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">VK7Days</string>
+    <string name="app_name">VK7Days - Task Scheduler</string>
     <string name="title_activity_main">VK7Days</string>
-    <string name="package_name">com.yourname.vk7days</string>
-    <string name="custom_url_scheme">com.yourname.vk7days</string>
+    <string name="package_name">com.vk7days.taskscheduler</string>
+    <string name="custom_url_scheme">com.vk7days.taskscheduler</string>
 </resources>

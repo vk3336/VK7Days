@@ -1,12 +1,20 @@
 {
-  "appId": "com.yourname.vk7days",
-  "appName": "VK7Days",
+  "appId": "com.vk7days.taskscheduler",
+  "appName": "VK7Days - Task Scheduler",
   "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
   "plugins": {
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_icon_config_sample",
-      "iconColor": "#488AFF",
-      "sound": "beep.wav"
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "backgroundColor": "#0b1220",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false,
+      "spinnerColor": "#ffffff"
+    },
+    "StatusBar": {
+      "style": "dark"
     }
   }
 }

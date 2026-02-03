@@ -2,15 +2,158 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    
+    <!-- App Identity -->
+    <title>VK7Days - Smart Task Scheduler with Voice Reminders</title>
+    <meta name="description" content="Professional task scheduler with custom voice recordings, smart notifications, and beautiful dark theme. Never miss important tasks again!" />
+    <meta name="keywords" content="task scheduler, voice reminders, notifications, productivity, daily planner, alarm app" />
+    <meta name="author" content="VK7Days" />
+    
+    <!-- Icons and Manifest -->
     <link rel="icon" type="image/png" href="/icons/vk7.png" />
     <link rel="apple-touch-icon" href="/icons/vk7.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Theme and Display -->
     <meta name="theme-color" content="#0b1220" />
-    <title>VK7Days - Task Scheduler</title>
+    <meta name="background-color" content="#0b1220" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="VK7Days" />
+    
+    <!-- Performance -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- SEO and Social -->
+    <meta property="og:title" content="VK7Days - Smart Task Scheduler" />
+    <meta property="og:description" content="Professional task scheduler with voice reminders and smart notifications" />
+    <meta property="og:image" content="/icons/vk7.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="VK7Days - Smart Task Scheduler" />
+    <meta name="twitter:description" content="Never miss important tasks with voice reminders and smart notifications" />
+    <meta name="twitter:image" content="/icons/vk7.png" />
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/icons/vk7.png" as="image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Loading Styles -->
+    <style>
+      /* Critical loading styles */
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #000000, #05060f);
+        color: #f3f6ff;
+        font-family: system-ui, -apple-system, sans-serif;
+        overflow-x: hidden;
+      }
+      
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, #000000, #05060f);
+        z-index: 9999;
+        transition: opacity 0.5s ease;
+      }
+      
+      .loading-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+      }
+      
+      .loading-text {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #22d3ee, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      .loading-subtitle {
+        font-size: 14px;
+        opacity: 0.7;
+        text-align: center;
+        max-width: 300px;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(34, 211, 238, 0.3);
+        border-top: 3px solid #22d3ee;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-top: 20px;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+      <img src="/icons/vk7.png" alt="VK7Days" class="loading-logo" />
+      <div class="loading-text">VK7Days</div>
+      <div class="loading-subtitle">Smart Task Scheduler with Voice Reminders</div>
+      <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- Main App -->
     <div id="root"></div>
+    
+    <!-- App Scripts -->
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Loading Script -->
+    <script>
+      // Hide loading screen when app is ready
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+            }, 500);
+          }
+        }, 1000); // Show loading for at least 1 second
+      });
+      
+      // Prevent zoom on double tap
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+          event.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
+      
+      // Prevent context menu on long press
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+      });
+    </script>
   </body>
 </html>

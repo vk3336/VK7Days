@@ -1,13 +1,13 @@
 {
-  "name": "VK7Days - Daily Task Scheduler",
+  "name": "VK7Days - Task Scheduler",
   "short_name": "VK7Days",
-  "description": "A powerful daily task scheduler with voice recording and alarm notifications",
+  "description": "Smart task scheduler with voice reminders and notifications",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#000000",
-  "theme_color": "#22d3ee",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
   "categories": ["productivity", "utilities"],
   "lang": "en",
   "dir": "ltr",
@@ -45,6 +45,14 @@
           "type": "image/png"
         }
       ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/vk7.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ]
 }

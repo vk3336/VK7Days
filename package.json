@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android": "cap run android",
+    "build:android": "npm run build && cap sync && cap build android"
   },
   "dependencies": {
-    "@capacitor/android": "^8.0.2",
-    "@capacitor/cli": "^7.4.5",
-    "@capacitor/core": "^8.0.2",
-    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/android": "3.4.3",
+    "@capacitor/cli": "3.4.3",
+    "@capacitor/core": "3.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "workbox-precaching": "^7.4.0"

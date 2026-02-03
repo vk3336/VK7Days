@@ -28,7 +28,24 @@ export default function App() {
     return "default";
   });
 
-  const ttsRef = useRef(null);
+  // Detect if running as installed app (APK)
+  const [isInstalledApp, setIsInstalledApp] = useState(false);
+
+  useEffect(() => {
+    // Check if running as installed PWA/APK
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.navigator.standalone || 
+                         document.referrer.includes('android-app://') ||
+                         window.location.protocol === 'file:' ||
+                         (window.navigator.userAgent.includes('wv') && window.navigator.userAgent.includes('Android'));
+    
+    setIsInstalledApp(isStandalone);
+    
+    // Also check for Capacitor environment
+    if (window.Capacitor) {
+      setIsInstalledApp(true);
+    }
+  }, []);
 
   // Save to localStorage
   useEffect(() => {
@@ -208,13 +225,13 @@ export default function App() {
     
     // Check if notifications are supported
     if (typeof Notification === "undefined") {
-      alert("Notifications are not supported in this browser");
+      alert("🚫 Notifications are not supported in this browser.\n\nFor the best experience, please:\n1. Use Chrome, Firefox, or Edge\n2. Download our Android app");
       return;
     }
 
-    // If already denied, show instructions
+    // If already denied, show helpful instructions
     if (Notification.permission === "denied") {
-      alert("Notifications are blocked. Please:\n1. Click the 🔒 lock icon in address bar\n2. Allow notifications\n3. Refresh the page");
+      alert("🔒 Notifications are currently blocked.\n\nTo enable notifications:\n\n1. Click the 🔒 lock icon in your address bar\n2. Change notifications to 'Allow'\n3. Refresh this page\n\nOr download our Android app for guaranteed notifications!");
       return;
     }
 
@@ -224,10 +241,10 @@ export default function App() {
     // Track permission result
     if (ok) {
       analytics.notificationPermissionGranted();
-      alert("✅ Notifications enabled! Background alarms will now work even when app is closed.");
+      alert("🎉 Notifications enabled successfully!\n\n✅ You'll now receive reminders even when the app is closed\n✅ Background alarms are active\n✅ Voice recordings will play automatically\n\nYour tasks will never be missed!");
     } else if (typeof Notification !== "undefined" && Notification.permission === "denied") {
       analytics.notificationPermissionDenied();
-      alert("❌ Notifications blocked. Please allow notifications in browser settings and refresh the page.");
+      alert("❌ Notifications were blocked.\n\nFor reliable reminders:\n• Allow notifications in browser settings\n• Or download our Android app for guaranteed alerts");
     }
 
     // Best-effort background scheduling (only on browsers that support Notification Triggers)
@@ -418,16 +435,77 @@ export default function App() {
   }
 
   function clearDay() {
-    if (!confirm(`Clear all tasks for ${dayLabel}?`)) return;
+    if (!confirm(`🗑️ Clear All Tasks for ${dayLabel}?\n\nThis will permanently delete all tasks scheduled for ${dayLabel}.\n\nAre you sure?`)) return;
     analytics.dayCleared(activeDay);
+    
+    // Clear tasks for the day
     setState((p) => ({ ...p, schedule: { ...p.schedule, [p.activeDay]: [] } }));
+    
+    // Update service worker to remove alarms for this day
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(reg => {
+        if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+          // Send updated alarms without the cleared day
+          const updatedAlarms = {};
+          Object.entries(state.schedule).forEach(([day, tasks]) => {
+            if (day !== activeDay) {
+              tasks.forEach(task => {
+                if (task.enabled) {
+                  updatedAlarms[task.id] = {
+                    id: task.id,
+                    title: task.title,
+                    time: task.time,
+                    day: day,
+                    enabled: task.enabled,
+                    hasCustomVoice: task.hasCustomVoice,
+                    customAudioUrl: task.hasCustomVoice ? `/recordings/${task.id}.webm` : null
+                  };
+                }
+              });
+            }
+          });
+          
+          reg.active.postMessage({
+            type: 'SCHEDULE_ALARMS',
+            data: { alarms: updatedAlarms }
+          });
+        }
+      });
+    });
+    
+    alert(`✅ All tasks for ${dayLabel} have been cleared.`);
   }
 
   function resetAll() {
-    if (!confirm("Clear ALL days and remove saved data from device?")) return;
+    if (!confirm("⚠️ Reset All Data?\n\nThis will permanently delete:\n• All your tasks and schedules\n• All voice recordings\n• All app settings\n\nThis action cannot be undone!\n\nAre you sure you want to continue?")) return;
+    
     analytics.allDataReset();
+    
+    // Clear all data
     clearAllState();
+    
+    // Reset state
     setState(makeDefaultState());
+    
+    // Clear any playing audio
+    try {
+      audioPlayer.stopLoop();
+    } catch {}
+    
+    // Clear service worker alarms
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(reg => {
+        if (reg.active && reg.active.scriptURL.includes('sw-custom.js')) {
+          reg.active.postMessage({
+            type: 'SCHEDULE_ALARMS',
+            data: { alarms: {} }
+          });
+        }
+      });
+    });
+    
+    // Show success message
+    alert("✅ All data has been reset successfully!\n\nYou can now start fresh with new tasks and schedules.");
   }
 
   function stopAlarm() {
@@ -479,26 +557,37 @@ export default function App() {
             <img className="logoImg" src="/icons/vk7.png" alt="VK7Days" />
           </div>
           <div>
-            <div className="brandName">VK7Days</div>
+            <div className="brandName">VK7Days - Task Scheduler</div>
             <div className="brandSub">
-              {notifStatus === "granted" ? "Alerts: ON" : notifStatus === "denied" ? "Alerts: BLOCKED" : "Alerts: OFF"}
-              {canBgSchedule ? " • Background notifications supported" : ""}
+              {notifStatus === "granted" ? "✅ Notifications: ON" : notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
+              {canBgSchedule ? " • Background alarms supported" : ""}
             </div>
           </div>
         </div>
 
         <div className="topActions">
-          <button className="btn" type="button" onClick={enableNotifications}>
-            Enable alerts
-          </button>
-          <a 
-            href="/downloads/VK7Days.apk" 
-            download="VK7Days.apk"
-            className="btn"
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            📱 Install App
-          </a>
+          {notifStatus !== "granted" && (
+            <button className="btn btn-primary" type="button" onClick={enableNotifications}>
+              🔔 Enable Alerts
+            </button>
+          )}
+          
+          {isInstalledApp ? (
+            // Show Reset All button when app is installed
+            <button className="btn btn-danger" type="button" onClick={resetAll}>
+              🗑️ Reset All Data
+            </button>
+          ) : (
+            // Show Download App button when running in browser
+            <a 
+              href="/downloads/VK7Days.apk" 
+              download="VK7Days.apk"
+              className="btn btn-success"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              📱 Download App
+            </a>
+          )}
         </div>
       </header>
 
@@ -506,11 +595,11 @@ export default function App() {
         <section className="panel">
           <div className="panelHeader">
             <div>
-              <div className="panelTitle">Days</div>
-              <div className="panelHint">Choose a day, add tasks with time + voice.</div>
+              <div className="panelTitle">📅 Weekly Schedule</div>
+              <div className="panelHint">Choose a day, add tasks with time and voice reminders.</div>
             </div>
-            <button className="btn" type="button" onClick={clearDay}>
-              Clear day
+            <button className="btn btn-danger" type="button" onClick={clearDay}>
+              🗑️ Clear {dayLabel}
             </button>
           </div>
 
@@ -529,9 +618,9 @@ export default function App() {
         <section className="panel">
           <div className="panelHeader">
             <div>
-              <div className="panelTitle">Tasks for {dayLabel}</div>
+              <div className="panelTitle">📋 Tasks for {dayLabel}</div>
               <div className="panelHint">
-                Custom voice recordings play when alarms trigger. Enable alerts for notifications when supported.
+                ✨ Custom voice recordings play when alarms trigger. Enable notifications for the best experience.
               </div>
             </div>
           </div>

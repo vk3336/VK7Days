@@ -252,7 +252,22 @@ self.addEventListener("notificationclick", async (event) => {
     }
   } else {
     // Open new window
-    await self.clients.openWindow("/");
+    const newClient = await self.clients.openWindow("/");
+
+    // Wait a moment for the new window to load, then send custom audio message
+    if (hasCustomVoice && customAudioUrl) {
+      setTimeout(() => {
+        self.clients.matchAll().then((allClients) => {
+          allClients.forEach((client) => {
+            client.postMessage({
+              type: "PLAY_CUSTOM_ALARM",
+              alarmId,
+              customAudioUrl,
+            });
+          });
+        });
+      }, 1000); // Wait 1 second for app to load
+    }
   }
 });
 

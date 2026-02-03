@@ -292,22 +292,33 @@ body{
   transform: translateY(0px);
 }
 
-.btnPrimary{
+.btn-primary, .btnPrimary{
   border-color: rgba(34,211,238,.6);
   background: linear-gradient(135deg, rgba(34,211,238,.8), rgba(167,139,250,.7));
   color: var(--bg0);
   font-weight: 600;
 }
-.btnPrimary:hover{ 
+.btn-primary:hover, .btnPrimary:hover{ 
   filter: brightness(1.1);
   box-shadow: 0 4px 20px rgba(34,211,238,.3);
 }
 
-.btnDanger{
+.btn-success {
+  border-color: rgba(52,211,153,.6);
+  background: linear-gradient(135deg, rgba(52,211,153,.8), rgba(16,185,129,.7));
+  color: var(--bg0);
+  font-weight: 600;
+}
+.btn-success:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 20px rgba(52,211,153,.3);
+}
+
+.btn-danger, .btnDanger{
   border-color: rgba(251,113,133,.6);
   background: rgba(251,113,133,.15);
 }
-.btnDanger:hover{ 
+.btn-danger:hover, .btnDanger:hover{ 
   background: rgba(251,113,133,.25);
   box-shadow: 0 4px 12px rgba(251,113,133,.2);
 }
