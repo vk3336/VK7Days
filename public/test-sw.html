@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Worker Test</title>
+</head>
+<body>
+    <h1>Service Worker Test</h1>
+    <button onclick="testAlarm()">Test Alarm (1 minute from now)</button>
+    <button onclick="checkSW()">Check Service Worker</button>
+    <button onclick="playRingtone()">Test Ringtone</button>
+    <div id="log"></div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += '<p>' + new Date().toLocaleTimeString() + ': ' + message + '</p>';
+            console.log(message);
+        }
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw-custom.js')
+                .then(reg => log('Service worker registered: ' + reg.scope))
+                .catch(err => log('Service worker registration failed: ' + err));
+        }
+
+        function testAlarm() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + 1);
+            const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            
+            const testAlarm = {
+                'test123': {
+                    id: 'test123',
+                    title: 'Test Alarm',
+                    time: time,
+                    day: ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()],
+                    enabled: true,
+                    hasCustomVoice: false,
+                    customAudioUrl: null
+                }
+            };
+
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SCHEDULE_ALARMS',
+                    data: { alarms: testAlarm }
+                });
+                log('Test alarm scheduled for ' + time);
+            } else {
+                log('No service worker controller available');
+            }
+        }
+
+        function checkSW() {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                log('Found ' + registrations.length + ' service workers');
+                registrations.forEach((reg, i) => {
+                    log('SW ' + i + ': ' + reg.scope + ' - ' + (reg.active ? 'active' : 'inactive'));
+                });
+            });
+        }
+
+        function playRingtone() {
+            const audio = new Audio('/ringtone/Dholida.mp3');
+            audio.play().then(() => {
+                log('Ringtone playing');
+            }).catch(err => {
+                log('Failed to play ringtone: ' + err);
+            });
+        }
+
+        // Listen for messages from service worker
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            log('Message from SW: ' + JSON.stringify(event.data));
+        });
+    </script>
+</body>
+</html>

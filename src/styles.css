@@ -1,0 +1,979 @@
+/* =========================
+   VK7Days — Premium AMOLED Dark
+   Black background + new font + new colors
+   + Compact task row + better selects/time
+   ========================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root{
+  --bg0:#000000;
+  --bg1:#05060f;
+  --bg2:#070a18;
+
+  --card: rgba(255,255,255,.045);
+  --card2: rgba(255,255,255,.075);
+
+  --text:#f3f6ff;
+  --muted: rgba(243,246,255,.72);
+  --muted2: rgba(243,246,255,.52);
+
+  --border: rgba(255,255,255,.10);
+  --border2: rgba(255,255,255,.16);
+
+  --shadow: 0 26px 90px rgba(0,0,0,.75);
+  --shadow2: 0 14px 34px rgba(0,0,0,.45);
+
+  --accent:#22d3ee;   /* cyan */
+  --accent2:#a78bfa;  /* purple */
+  --accent3:#34d399;  /* emerald */
+  --danger:#fb7185;   /* pink-red */
+
+  --radius-lg: 22px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+}
+
+/* base */
+*{ box-sizing:border-box; }
+html, body { height:100%; }
+
+body{
+  margin:0;
+  color: var(--text);
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+
+  /* helps native selects/time match dark */
+  color-scheme: dark;
+
+  background:
+    radial-gradient(900px 700px at 20% 15%, rgba(34,211,238,.18), transparent 60%),
+    radial-gradient(900px 700px at 85% 25%, rgba(167,139,250,.18), transparent 62%),
+    radial-gradient(900px 700px at 50% 100%, rgba(52,211,153,.10), transparent 62%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+}
+
+/* layout */
+.page{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* TOP BAR */
+.topBar{
+  position: static;
+  z-index: 100;
+  padding: 20px 24px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 16px;
+  flex-wrap: nowrap;
+
+  border-bottom: 1px solid var(--border2);
+  background: rgba(0,0,0,.85);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden; /* Prevent overflow */
+}
+
+.logo{
+  width:48px;
+  height:48px;
+  border-radius: 18px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+
+  background: linear-gradient(135deg, rgba(34,211,238,.15), rgba(167,139,250,.15));
+  border: 1px solid rgba(255,255,255,.15);
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  flex: 0 0 auto;
+}
+.logoImg{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  display:block;
+}
+
+.brandName{
+  font-size:18px;
+  font-weight:700;
+  letter-spacing: .3px;
+  white-space: nowrap;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brandSub{
+  margin-top:3px;
+  font-size:13px;
+  color: var(--muted);
+  max-width: 400px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  line-height: 1.3;
+}
+
+.topActions{
+  display:flex;
+  gap:12px;
+  flex-wrap: nowrap;
+  align-items:center;
+  justify-content:flex-end;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Responsive header */
+@media (max-width: 768px) {
+  .topBar {
+    padding: 16px 20px;
+    gap: 12px;
+    flex-wrap: nowrap; /* Force single row */
+  }
+  
+  .brand {
+    gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  
+  .logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    flex-shrink: 0;
+  }
+  
+  .brandName {
+    font-size: 16px;
+  }
+  
+  .brandSub {
+    font-size: 12px;
+    max-width: 200px; /* Reduce max width on mobile */
+  }
+  
+  .topActions {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  
+  .topActions .btn {
+    padding: 8px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topBar {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  
+  .brand {
+    justify-content: flex-start;
+    text-align: left;
+    min-width: 0;
+  }
+  
+  .brandSub {
+    max-width: 150px; /* Further reduce on small screens */
+  }
+  
+  .topActions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  
+  .topActions .btn {
+    flex: 0 0 auto;
+    min-width: 65px;
+    padding: 8px 8px;
+    font-size: 10px;
+    text-align: center;
+  }
+}
+
+/* container */
+.container{
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 18px 16px 34px;
+
+  display:grid;
+  grid-template-columns: minmax(360px, 560px) 1fr;
+  gap: 16px;
+}
+@media (max-width: 1040px){
+  .container{ grid-template-columns: 1fr; }
+}
+
+/* panels */
+.panel{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(160px 160px at 15% 15%, rgba(34,211,238,.10), transparent 60%),
+    radial-gradient(160px 160px at 85% 25%, rgba(167,139,250,.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+  box-shadow: var(--shadow2);
+  overflow:hidden;
+}
+
+.panelHeader{
+  padding: 16px 16px 16px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.panelTitle{
+  font-size:15px;
+  font-weight:700;
+  letter-spacing: .2px;
+}
+
+.panelHint{
+  font-size:12.5px;
+  color: var(--muted);
+  margin-top:4px;
+  max-width: 520px;
+}
+
+/* buttons */
+.btn, .btnPrimary, .btnDanger{
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  user-select:none;
+  transition: all .2s ease;
+  color: var(--text);
+  background: rgba(255,255,255,.06);
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn:hover{
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.btn:active, .btnPrimary:active, .btnDanger:active{
+  transform: translateY(0px);
+}
+
+.btn-primary, .btnPrimary{
+  border-color: rgba(34,211,238,.6);
+  background: linear-gradient(135deg, rgba(34,211,238,.8), rgba(167,139,250,.7));
+  color: var(--bg0);
+  font-weight: 600;
+}
+.btn-primary:hover, .btnPrimary:hover{ 
+  filter: brightness(1.1);
+  box-shadow: 0 4px 20px rgba(34,211,238,.3);
+}
+
+.btn-success {
+  border-color: rgba(52,211,153,.6);
+  background: linear-gradient(135deg, rgba(52,211,153,.8), rgba(16,185,129,.7));
+  color: var(--bg0);
+  font-weight: 600;
+}
+.btn-success:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 20px rgba(52,211,153,.3);
+}
+
+.btn-danger, .btnDanger{
+  border-color: rgba(251,113,133,.6);
+  background: rgba(251,113,133,.15);
+}
+.btn-danger:hover, .btnDanger:hover{ 
+  background: rgba(251,113,133,.25);
+  box-shadow: 0 4px 12px rgba(251,113,133,.2);
+}
+
+/* day tabs */
+.dayTabs{
+  padding: 0 14px 12px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7 equal columns */
+  gap: 10px; /* equal spacing */
+  align-items: center;
+}
+.dayTabs::-webkit-scrollbar{ display:none; }
+
+.chip{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+
+  padding: 10px 0;              /* vertical only = consistent widths */
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition: background .18s ease, border-color .18s ease, transform .08s ease;
+}
+.chip:hover{
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.20);
+}
+.chip:active{ transform: translateY(1px); }
+
+.chipActive{
+  border-color: rgba(34,211,238,.55);
+  background: rgba(34,211,238,.14);
+  box-shadow: 0 0 0 5px rgba(34,211,238,.10);
+}
+
+/* search */
+.searchRow{
+  padding: 0 14px 14px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.searchBox{
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+}
+.searchIcon{ color: var(--muted); font-weight: 700; }
+.searchBox input{
+  width:100%;
+  border: none;
+  outline:none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+.searchBox:focus-within{
+  border-color: rgba(34,211,238,.60);
+  box-shadow: 0 0 0 5px rgba(34,211,238,.10);
+}
+
+/* card inside panel */
+.card{
+  margin: 0 14px 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+.cardTitle{
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: .2px;
+}
+
+/* form grid */
+.gridForm{
+  display:grid;
+  grid-template-columns: 1.2fr .7fr 1fr 1fr;
+  gap: 12px;
+}
+
+.grid2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 920px){
+  .gridForm{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px){
+  .gridForm{ grid-template-columns: 1fr; }
+  .grid2{ grid-template-columns: 1fr; }
+  .searchRow{ flex-direction:column; align-items:stretch; }
+}
+@media (max-width: 380px){
+  .dayTabs{ gap: 8px; padding: 0 10px 10px; }
+  .chip{ font-size: 12px; padding: 9px 0; }
+}
+
+/* =========================
+   Inputs + Time + Select (beautify)
+   ========================= */
+
+.field label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.field{
+  margin-bottom: 4px;
+}
+
+.field input,
+.field select{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.24);
+  color: var(--text);
+  outline:none;
+}
+
+/* ✅ time input icon fix */
+.field input[type="time"]{
+  letter-spacing: .2px;
+  position: relative;
+}
+
+.field input[type="time"]::-webkit-calendar-picker-indicator{
+  filter: invert(1) opacity(.75);
+  cursor: pointer;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+/* ✅ custom select arrow */
+.field select{
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 42px;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath fill='white' fill-opacity='0.85' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px 14px;
+}
+
+.field input::placeholder{ color: rgba(243,246,255,.30); }
+
+.field input:focus,
+.field select:focus{
+  border-color: rgba(167,139,250,.60);
+  box-shadow: 0 0 0 5px rgba(167,139,250,.12);
+}
+
+/* actions row */
+.actionsRow{
+  margin-top: 14px;
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px;
+  align-items:center;
+}
+.hint{ font-size: 12px; color: var(--muted2); }
+
+/* =========================
+   Tasks: Compact + Buttons one row
+   ========================= */
+
+.list{
+  padding: 0 14px 14px;
+  display:grid;
+  gap: 10px; /* ✅ smaller gap */
+}
+
+.task{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  padding: 10px 12px;  /* ✅ smaller */
+  border-radius: 16px; /* ✅ tighter */
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(26px 26px at 14% 20%, rgba(34,211,238,.12), transparent 60%),
+    radial-gradient(26px 26px at 80% 30%, rgba(167,139,250,.12), transparent 60%),
+    rgba(255,255,255,.03);
+  box-shadow: 0 12px 26px rgba(0,0,0,.35);
+  transition: transform .10s ease, border-color .18s ease, background .18s ease;
+
+  flex-wrap: wrap; /* ✅ on small widths buttons move to next line nicely */
+}
+
+.task:hover{
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.20);
+  background:
+    radial-gradient(26px 26px at 14% 20%, rgba(34,211,238,.16), transparent 60%),
+    radial-gradient(26px 26px at 80% 30%, rgba(167,139,250,.16), transparent 60%),
+    rgba(255,255,255,.04);
+}
+
+.taskDisabled{ opacity: .55; }
+
+.taskTime{
+  width: 70px;              /* ✅ smaller */
+  font-weight: 700;
+  letter-spacing: .3px;
+  color: rgba(243,246,255,.95);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: 8px 10px;        /* ✅ smaller */
+  text-align:center;
+  flex: 0 0 auto;
+}
+
+.taskMain{
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.taskTitle{
+  font-weight: 700;
+  font-size: 15px;          /* ✅ title bigger */
+  letter-spacing: .2px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.taskNotes{
+  margin-top: 3px;
+  font-size: 12px;          /* ✅ notes smaller */
+  color: var(--muted);
+  opacity: .90;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.taskBtns{
+  display:flex;
+  gap: 8px;
+  flex-wrap: nowrap;        /* ✅ ALWAYS one line */
+  align-items:center;
+  justify-content:flex-end;
+
+  width: auto;
+  flex: 0 0 auto;
+}
+
+/* ✅ if task wraps on small screens, buttons can go full row but still one-line */
+.taskBtns{
+  margin-left: auto;
+}
+
+/* ✅ compact buttons */
+.taskBtns .btn,
+.taskBtns .btnDanger{
+  width: auto;
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 12px;
+  min-width: 78px;
+}
+
+/* ✅ delete button less “huge” */
+.taskBtns .btnDanger{
+  background: rgba(251,113,133,.12);
+  border-color: rgba(251,113,133,.45);
+}
+.taskBtns .btnDanger:hover{
+  background: rgba(251,113,133,.18);
+}
+
+/* ✅ on very small phones: keep buttons one row by allowing horizontal scroll */
+@media (max-width: 420px){
+  .taskBtns{
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .taskBtns::-webkit-scrollbar{ display:none; }
+}
+
+/* empty state */
+.empty{
+  margin: 0 14px 14px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(255,255,255,.20);
+  background: rgba(255,255,255,.02);
+  color: var(--muted);
+}
+
+/* modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.70);
+  display:grid;
+  place-items:center;
+  padding: 18px;
+  z-index: 200;
+}
+
+.modal{
+  width: min(620px, 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255,255,255,.16);
+  background:
+    radial-gradient(160px 160px at 18% 20%, rgba(34,211,238,.12), transparent 60%),
+    radial-gradient(160px 160px at 85% 25%, rgba(167,139,250,.12), transparent 60%),
+    rgba(0,0,0,.92);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+
+.modalHeader{
+  padding: 16px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.modalTitle{ font-weight: 700; letter-spacing: .2px; }
+.modalBody{ padding: 14px; }
+
+/* alarm */
+.alarmTitle{ font-size: 18px; font-weight: 700; }
+.alarmMeta{ display:flex; gap: 10px; flex-wrap:wrap; margin-top: 10px; }
+.pill{
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: rgba(243,246,255,.9);
+}
+.alarmNotes{ margin-top: 10px; color: var(--muted); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; }
+}
+
+/* mobile compact */
+@media (max-width: 420px) {
+  body { font-size: 14px; }
+
+  .topBar { 
+    padding: 12px 16px; 
+    gap: 8px;
+  }
+
+  .logo{ 
+    width: 42px; 
+    height: 42px; 
+    border-radius: 14px; 
+  }
+  .logoImg{ padding: 6px; }
+
+  .brandName { font-size: 15px; }
+  .brandSub { 
+    font-size: 11px; 
+    max-width: 120px; /* Very compact on small screens */
+  }
+
+  .topActions .btn{
+    padding: 8px 8px;
+    font-size: 10px;
+    min-width: 60px;
+  }
+
+  .container{ padding: 12px 12px 18px; gap: 12px; }
+  .panelHeader{ padding: 15px 15px 10px; }
+
+  .dayTabs{ padding: 0 12px 10px; gap: 8px; }
+  .chip{ padding: 8px 12px; font-size: 12px; }
+
+  .searchRow{ padding: 0 12px 12px; }
+  .searchBox{ padding: 10px 12px; }
+  .searchBox input{ font-size: 12.5px; }
+
+  .card{ margin: 0 12px 12px; padding: 12px; }
+
+  .field input,
+  .field select{
+    padding: 10px 11px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+
+  .list{ padding: 0 12px 12px; }
+  .empty{ margin: 0 12px 12px; padding: 14px; }
+}
+
+/* =========================================================
+   Native Select + Native Time — best possible styling
+   (options/picker are still OS-native on many devices)
+   ========================================================= */
+
+/* better highlight color for native controls */
+:root { accent-color: var(--accent); }
+
+/* force dark native UI where supported */
+select,
+input[type="time"]{
+  color-scheme: dark;
+}
+
+/* ---------- SELECT (voice) ---------- */
+
+/* keep your current select look but polish */
+.field select{
+  background-color: rgba(0,0,0,.30);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+/* dropdown list items (works on many desktop browsers) */
+.field select option,
+.field select optgroup{
+  background: #05060f;         /* deep black */
+  color: var(--text);          /* white text */
+}
+
+/* selected item (works in some browsers) */
+.field select option:checked{
+  background: #0b1220;
+  color: var(--text);
+}
+
+/* hover (supported in some browsers only) */
+.field select option:hover{
+  background: rgba(34,211,238,.18);
+}
+
+/* ---------- TIME (HH:MM) ---------- */
+
+/* input styling */
+.field input[type="time"]{
+  background-color: rgba(0,0,0,.30);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  font-variant-numeric: tabular-nums; /* cleaner digits */
+  position: relative;
+}
+
+/* Ensure consistent placeholder/empty state */
+.field input[type="time"]:invalid {
+  color: rgba(243,246,255,.4);
+}
+
+.field input[type="time"]:valid {
+  color: var(--text);
+}
+
+/* WebKit time text parts */
+.field input[type="time"]::-webkit-datetime-edit{
+  color: var(--text);
+  padding: 0;
+}
+
+.field input[type="time"]::-webkit-datetime-edit-fields-wrapper{
+  padding: 0;
+}
+
+.field input[type="time"]::-webkit-datetime-edit-text{
+  color: rgba(243,246,255,.72);
+  padding: 0 2px;
+}
+
+.field input[type="time"]::-webkit-datetime-edit-hour-field,
+.field input[type="time"]::-webkit-datetime-edit-minute-field{
+  color: var(--text);
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+
+/* highlight when selecting hour/minute */
+.field input[type="time"]::-webkit-datetime-edit-hour-field:focus,
+.field input[type="time"]::-webkit-datetime-edit-minute-field:focus{
+  background: rgba(34,211,238,.18);
+  outline: none;
+}
+
+/* clock icon */
+.field input[type="time"]::-webkit-calendar-picker-indicator{
+  filter: invert(1) opacity(.85);
+  background-color: rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 6px;
+  cursor: pointer;
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* stronger focus ring for both */
+.field select:focus,
+.field input[type="time"]:focus{
+  border-color: rgba(34,211,238,.55);
+  box-shadow: 0 0 0 5px rgba(34,211,238,.12);
+}
+/* Add-task actions: big button that uses full width */
+.actionsRowAdd{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.btnPrimaryWide{
+  width: 100%;
+  height: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+/* Voice Recording Styles */
+.recordingControls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btnRecord {
+  background: var(--accent3);
+  color: var(--bg0);
+  border: none;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnRecord:hover:not(:disabled) {
+  background: #10b981;
+  transform: translateY(-1px);
+}
+
+.btnRecord:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recordingActive {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+}
+
+.recordingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #ef4444;
+}
+
+.recordingDot {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.recordingButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.recordingComplete {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: var(--radius-sm);
+}
+
+.recordingInfo {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.recordingError {
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  color: #ef4444;
+  font-size: 14px;
+}
+
+.recordingUnsupported {
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.voiceIndicator {
+  margin-left: 8px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* Update task styles for voice indicator */
+.taskTitle {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: var(--text);
+}
