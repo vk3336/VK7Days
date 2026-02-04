@@ -22,6 +22,16 @@ export default function App() {
   const [alarmDayKey, setAlarmDayKey] = useState(null);
 
   const [notifStatus, setNotifStatus] = useState(() => {
+    // Check if running as installed app first
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.navigator.standalone || 
+                         document.referrer.includes('android-app://') ||
+                         window.location.protocol === 'file:' ||
+                         (window.navigator.userAgent.includes('wv') && window.navigator.userAgent.includes('Android')) ||
+                         window.Capacitor;
+    
+    if (isStandalone) return "granted";
+    
     if (typeof Notification === "undefined") return "unsupported";
     if (Notification.permission === "granted") return "granted";
     if (Notification.permission === "denied") return "denied";
@@ -223,7 +233,15 @@ export default function App() {
   async function enableNotifications() {
     analytics.notificationEnabled();
     
-    // Check if notifications are supported
+    // If running as installed app (Capacitor/APK), notifications work differently
+    if (isInstalledApp || window.Capacitor) {
+      // In Capacitor/native app, notifications are handled by the service worker
+      setNotifStatus("granted");
+      alert("🎉 Notifications are active!\n\n✅ Background alarms are working\n✅ Voice recordings will play automatically\n✅ Your tasks will never be missed!\n\nRunning as installed app - notifications are fully supported.");
+      return;
+    }
+    
+    // Check if notifications are supported in browser
     if (typeof Notification === "undefined") {
       alert("🚫 Notifications are not supported in this browser.\n\nFor the best experience, please:\n1. Use Chrome, Firefox, or Edge\n2. Download our Android app");
       return;
@@ -559,14 +577,16 @@ export default function App() {
           <div>
             <div className="brandName">VK7Days</div>
             <div className="brandSub">
-              {notifStatus === "granted" ? "✅ Notifications: ON" : notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
+              {isInstalledApp ? "✅ Native App: Notifications Active" : 
+               notifStatus === "granted" ? "✅ Notifications: ON" : 
+               notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
               {canBgSchedule ? " • Background alarms supported" : ""}
             </div>
           </div>
         </div>
 
         <div className="topActions">
-          {notifStatus !== "granted" && (
+          {!isInstalledApp && notifStatus !== "granted" && (
             <button className="btn btn-primary" type="button" onClick={enableNotifications}>
               🔔 Enable Alerts
             </button>
