@@ -6,6 +6,7 @@ import { ensureNotificationPermission, tick } from "./lib/alarm";
 import { audioStorage, audioPlayer } from "./lib/recorder";
 import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask } from "./lib/notify";
 import { androidNotifications } from "./lib/androidNotifications";
+import { backgroundAlarms } from "./lib/backgroundAlarms";
 import { analytics } from "./lib/analytics";
 
 import DayTabs from "./components/DayTabs";
@@ -78,13 +79,13 @@ export default function App() {
     
     setIsInstalledApp(installedApp);
     
-    // Only setup Android notifications for actual Capacitor apps
-    if (installedApp) {
-      // Setup Android notification listeners
-      androidNotifications.setupNotificationListeners();
+    // If running as installed app (Capacitor/APK), use background alarms
+    if (isInstalledApp) {
+      // Setup background alarm listeners
+      backgroundAlarms.setupGlobalHandlers();
       
-      // Check current notification permissions
-      androidNotifications.checkPermissions().then(result => {
+      // Check current permissions
+      backgroundAlarms.checkPermissions().then(result => {
         if (result.granted) {
           setNotifStatus("granted");
         }
@@ -279,26 +280,40 @@ export default function App() {
   async function enableNotifications() {
     analytics.notificationEnabled();
     
-    // If running as installed app (Capacitor/APK), use Android notifications
+    // If running as installed app (Capacitor/APK), use background alarms
     if (isInstalledApp || window.Capacitor) {
       try {
-        const result = await androidNotifications.requestPermissions();
+        const result = await backgroundAlarms.requestPermissions();
         
         if (result.granted) {
           setNotifStatus("granted");
           
-          // Schedule all enabled tasks
-          await androidNotifications.scheduleAllTasks(state.schedule);
+          // Schedule all enabled tasks using background alarms
+          await backgroundAlarms.scheduleAllTasks(state.schedule);
           
-          alert("🎉 Notifications enabled successfully!\n\n✅ Background alarms are now active\n✅ Voice recordings will play automatically\n✅ Your tasks will never be missed!\n\nRunning as installed app - notifications are fully supported.");
+          alert(result.message || "🎉 Background alarms enabled successfully!\n\n✅ Your tasks will trigger even when the app is closed\n✅ Voice recordings will play automatically\n✅ Notifications work reliably in background");
           return;
         } else {
-          alert("🔒 Notification permissions are required for alarms.\n\nPlease:\n1. Go to Settings > Apps > VK7Days\n2. Enable 'Notifications'\n3. Enable 'Display over other apps' (if available)\n4. Restart the app\n\nThis ensures your alarms work even when the app is closed.");
+          const permissionDetails = result.permissions || {};
+          let message = "🔒 Some permissions are needed for reliable alarms:\n\n";
+          
+          if (!permissionDetails.hasNotificationPermission) {
+            message += "❌ Allow Notifications\n";
+          }
+          if (!permissionDetails.hasExactAlarmPermission) {
+            message += "❌ Allow Exact Alarms\n";
+          }
+          if (permissionDetails.isBatteryOptimized) {
+            message += "⚠️ Disable Battery Optimization\n";
+          }
+          
+          message += "\nPlease check your device settings and try again.";
+          alert(message);
           return;
         }
       } catch (error) {
-        console.error('Android notification setup failed:', error);
-        alert("❌ Failed to setup notifications.\n\nPlease check your device settings and try again.");
+        console.error('Background alarm setup failed:', error);
+        alert("❌ Failed to setup background alarms.\n\nPlease check your device settings and try again.");
         return;
       }
     }
@@ -415,14 +430,14 @@ export default function App() {
       if (task) {
         analytics.taskToggled(id, !task.enabled);
         
-        // Update Android notifications
+        // Update background alarms
         if (isInstalledApp || window.Capacitor) {
           if (!task.enabled) {
-            // Task being enabled - schedule notification
-            androidNotifications.scheduleNotification({...task, enabled: true}, p.activeDay);
+            // Task being enabled - schedule background alarm
+            backgroundAlarms.scheduleAlarm({...task, enabled: true}, p.activeDay);
           } else {
-            // Task being disabled - cancel notification
-            androidNotifications.cancelNotification(task.id);
+            // Task being disabled - cancel background alarm
+            backgroundAlarms.cancelAlarm(task.id);
           }
         }
         
@@ -471,9 +486,9 @@ export default function App() {
   function deleteTask(id) {
     analytics.taskDeleted(id);
     
-    // Cancel Android notification
+    // Cancel background alarm
     if (isInstalledApp || window.Capacitor) {
-      androidNotifications.cancelNotification(id);
+      backgroundAlarms.cancelAlarm(id);
     }
     
     // Update service worker
@@ -675,7 +690,7 @@ export default function App() {
             // APK/Installed App: Show functional buttons
             <>
               <button className="btn btn-primary" type="button" onClick={enableNotifications}>
-                🔔 Enable Alerts
+                {notifStatus === "granted" ? "🔔 Alarms Active" : "🔔 Allow Permissions"}
               </button>
               <button className="btn btn-danger" type="button" onClick={resetAll}>
                 🗑️ Reset All Data
