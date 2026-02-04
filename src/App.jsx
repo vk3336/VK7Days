@@ -631,28 +631,34 @@ export default function App() {
           <div>
             <div className="brandName">VK7Days</div>
             <div className="brandSub">
-              {isInstalledApp ? "✅ Notifications Active" : 
-               notifStatus === "granted" ? "✅ Notifications: ON" : 
-               notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
-              {canBgSchedule ? " • Background alarms supported" : ""}
+              {isInstalledApp ? (
+                // APK: Show notification status
+                <>
+                  {notifStatus === "granted" ? "✅ Notifications Active" : 
+                   notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
+                  {canBgSchedule ? " • Background alarms supported" : ""}
+                </>
+              ) : (
+                // Web: Show download message
+                "📱 Download the app for full functionality"
+              )}
             </div>
           </div>
         </div>
 
         <div className="topActions">
-          {(notifStatus !== "granted" || isInstalledApp) && (
-            <button className="btn btn-primary" type="button" onClick={enableNotifications}>
-              🔔 Enable Alerts
-            </button>
-          )}
-          
           {isInstalledApp ? (
-            // Show Reset All button when app is installed
-            <button className="btn btn-danger" type="button" onClick={resetAll}>
-              🗑️ Reset All Data
-            </button>
+            // APK/Installed App: Show functional buttons
+            <>
+              <button className="btn btn-primary" type="button" onClick={enableNotifications}>
+                🔔 Enable Alerts
+              </button>
+              <button className="btn btn-danger" type="button" onClick={resetAll}>
+                🗑️ Reset All Data
+              </button>
+            </>
           ) : (
-            // Show Download App button when running in browser
+            // Web App: Only show download button
             <a 
               href="/downloads/VK7Days.apk" 
               download="VK7Days.apk"
@@ -666,6 +672,37 @@ export default function App() {
       </header>
 
       <main className="container">
+        {!isInstalledApp && (
+          <section className="panel" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', marginBottom: '20px' }}>
+            <div className="panelHeader">
+              <div>
+                <div className="panelTitle">📱 Get the Full Experience</div>
+                <div className="panelHint" style={{ color: '#f0f0f0' }}>
+                  Download our Android app for reliable notifications, background alarms, and voice reminders that work even when your phone is closed.
+                </div>
+              </div>
+              <a 
+                href="/downloads/VK7Days.apk" 
+                download="VK7Days.apk"
+                className="btn btn-success"
+                style={{ textDecoration: 'none', color: 'inherit', backgroundColor: '#28a745', border: 'none' }}
+              >
+                📱 Download APK
+              </a>
+            </div>
+            <div style={{ padding: '15px 0', fontSize: '14px', opacity: '0.9' }}>
+              <strong>Why download the app?</strong>
+              <ul style={{ margin: '10px 0', paddingLeft: '20px' }}>
+                <li>✅ Reliable background notifications</li>
+                <li>✅ Custom voice recordings that play automatically</li>
+                <li>✅ Works even when your phone is locked</li>
+                <li>✅ No browser limitations</li>
+              </ul>
+              <em>This web version is for preview only. Download the app for full functionality.</em>
+            </div>
+          </section>
+        )}
+
         <section className="panel">
           <div className="panelHeader">
             <div>
