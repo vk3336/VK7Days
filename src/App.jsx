@@ -43,19 +43,43 @@ export default function App() {
   const [isInstalledApp, setIsInstalledApp] = useState(false);
 
   useEffect(() => {
-    // Check if running as installed PWA/APK
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                         window.navigator.standalone || 
-                         document.referrer.includes('android-app://') ||
-                         window.location.protocol === 'file:' ||
-                         (window.navigator.userAgent.includes('wv') && window.navigator.userAgent.includes('Android'));
+    // More reliable detection for installed app vs web
+    const isCapacitor = !!(window.Capacitor);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isNavigatorStandalone = window.navigator.standalone;
+    const isAndroidWebView = window.navigator.userAgent.includes('wv') && window.navigator.userAgent.includes('Android');
+    const isFileProtocol = window.location.protocol === 'file:';
+    const isAndroidApp = document.referrer.includes('android-app://');
     
-    setIsInstalledApp(isStandalone);
+    // Force web mode for common web domains
+    const isWebDomain = window.location.hostname.includes('vercel.app') || 
+                       window.location.hostname.includes('netlify.app') || 
+                       window.location.hostname.includes('github.io') ||
+                       window.location.hostname === 'localhost' ||
+                       window.location.protocol === 'https:' && !isCapacitor;
     
-    // Also check for Capacitor environment
-    if (window.Capacitor) {
-      setIsInstalledApp(true);
-      
+    // Only consider it an installed app if it's actually Capacitor
+    const installedApp = isCapacitor && !isWebDomain;
+    
+    console.log('App detection:', {
+      isCapacitor,
+      isStandalone,
+      isNavigatorStandalone,
+      isAndroidWebView,
+      isFileProtocol,
+      isAndroidApp,
+      isWebDomain,
+      hostname: window.location.hostname,
+      protocol: window.location.protocol,
+      finalDecision: installedApp,
+      userAgent: window.navigator.userAgent,
+      referrer: document.referrer
+    });
+    
+    setIsInstalledApp(installedApp);
+    
+    // Only setup Android notifications for actual Capacitor apps
+    if (installedApp) {
       // Setup Android notification listeners
       androidNotifications.setupNotificationListeners();
       
