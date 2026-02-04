@@ -44,42 +44,23 @@ export default function App() {
   const [isInstalledApp, setIsInstalledApp] = useState(false);
 
   useEffect(() => {
-    // More reliable detection for installed app vs web
+    // Detect if running as installed APK vs web browser
     const isCapacitor = !!(window.Capacitor);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isNavigatorStandalone = window.navigator.standalone;
-    const isAndroidWebView = window.navigator.userAgent.includes('wv') && window.navigator.userAgent.includes('Android');
-    const isFileProtocol = window.location.protocol === 'file:';
-    const isAndroidApp = document.referrer.includes('android-app://');
-    
-    // Force web mode for common web domains
-    const isWebDomain = window.location.hostname.includes('vercel.app') || 
-                       window.location.hostname.includes('netlify.app') || 
-                       window.location.hostname.includes('github.io') ||
-                       window.location.hostname === 'localhost' ||
-                       window.location.protocol === 'https:' && !isCapacitor;
-    
-    // Only consider it an installed app if it's actually Capacitor
-    const installedApp = isCapacitor && !isWebDomain;
+    const isAndroidApp = isCapacitor && window.Capacitor.getPlatform() === 'android';
     
     console.log('App detection:', {
       isCapacitor,
-      isStandalone,
-      isNavigatorStandalone,
-      isAndroidWebView,
-      isFileProtocol,
       isAndroidApp,
-      isWebDomain,
+      platform: window.Capacitor?.getPlatform(),
       hostname: window.location.hostname,
       protocol: window.location.protocol,
-      finalDecision: installedApp,
-      userAgent: window.navigator.userAgent,
-      referrer: document.referrer
+      userAgent: window.navigator.userAgent
     });
     
-    setIsInstalledApp(installedApp);
+    // Only show APK UI if it's actually running in Capacitor on Android
+    setIsInstalledApp(isAndroidApp);
     
-    // If running as installed app (Capacitor/APK), use background alarms
+    // If running as installed APK, use background alarms
     if (isInstalledApp) {
       // Setup background alarm listeners
       backgroundAlarms.setupGlobalHandlers();
@@ -687,7 +668,7 @@ export default function App() {
 
         <div className="topActions">
           {isInstalledApp ? (
-            // APK/Installed App: Show functional buttons
+            // APK: Show functional buttons
             <>
               <button className="btn btn-primary" type="button" onClick={enableNotifications}>
                 {notifStatus === "granted" ? "🔔 Alarms Active" : "🔔 Allow Permissions"}
@@ -697,7 +678,7 @@ export default function App() {
               </button>
             </>
           ) : (
-            // Web App: Only show download button
+            // Web: Only show download button
             <a 
               href="/downloads/VK7Days.apk" 
               download="VK7Days.apk"
