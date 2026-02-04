@@ -15,7 +15,7 @@ public class MainActivity extends BridgeActivity {
     }
     
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         // Ensure app stays active for notifications
     }

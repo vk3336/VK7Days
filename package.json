@@ -1,7 +1,7 @@
 {
   "name": "vk7days",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,9 +12,9 @@
     "build:android": "npm run build && cap sync && cap build android"
   },
   "dependencies": {
-    "@capacitor/android": "3.4.3",
-    "@capacitor/cli": "3.4.3",
-    "@capacitor/core": "3.4.3",
+    "@capacitor/android": "^4.8.1",
+    "@capacitor/cli": "^4.8.1",
+    "@capacitor/core": "^4.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "workbox-precaching": "^7.4.0"
