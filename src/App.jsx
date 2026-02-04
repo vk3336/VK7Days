@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./styles.css";
 
 import { DAYS, clearAllState, loadState, makeDefaultState, saveState, sortByTime } from "./lib/storage";
 import { ensureNotificationPermission, tick } from "./lib/alarm";
 import { audioStorage, audioPlayer } from "./lib/recorder";
 import { canScheduleTriggeredNotifications, syncAllTriggeredNotifications, scheduleTriggeredNotificationForTask } from "./lib/notify";
+import { androidNotifications } from "./lib/androidNotifications";
 import { analytics } from "./lib/analytics";
 
 import DayTabs from "./components/DayTabs";
@@ -54,6 +55,23 @@ export default function App() {
     // Also check for Capacitor environment
     if (window.Capacitor) {
       setIsInstalledApp(true);
+      
+      // Setup Android notification listeners
+      androidNotifications.setupNotificationListeners();
+      
+      // Check current notification permissions
+      androidNotifications.checkPermissions().then(result => {
+        if (result.granted) {
+          setNotifStatus("granted");
+        }
+      });
+
+      // Global function to show alarm when app is opened from notification
+      window.showAlarmFromNotification = (task, dayKey) => {
+        console.log('🔔 Showing alarm from notification:', task);
+        setAlarmTask(task);
+        setAlarmDayKey(dayKey);
+      };
     }
   }, []);
 
@@ -64,6 +82,10 @@ export default function App() {
 
   // ✅ Audio player for custom recordings (replaces TTS looper)
   useEffect(() => {
+    // Make audio player and storage available globally for notifications
+    window.audioPlayer = audioPlayer;
+    window.audioStorage = audioStorage;
+    
     return () => {
       try {
         audioPlayer.stopLoop();
@@ -233,15 +255,31 @@ export default function App() {
   async function enableNotifications() {
     analytics.notificationEnabled();
     
-    // If running as installed app (Capacitor/APK), notifications work differently
+    // If running as installed app (Capacitor/APK), use Android notifications
     if (isInstalledApp || window.Capacitor) {
-      // In Capacitor/native app, notifications are handled by the service worker
-      setNotifStatus("granted");
-      alert("🎉 Notifications are active!\n\n✅ Background alarms are working\n✅ Voice recordings will play automatically\n✅ Your tasks will never be missed!\n\nRunning as installed app - notifications are fully supported.");
-      return;
+      try {
+        const result = await androidNotifications.requestPermissions();
+        
+        if (result.granted) {
+          setNotifStatus("granted");
+          
+          // Schedule all enabled tasks
+          await androidNotifications.scheduleAllTasks(state.schedule);
+          
+          alert("🎉 Notifications enabled successfully!\n\n✅ Background alarms are now active\n✅ Voice recordings will play automatically\n✅ Your tasks will never be missed!\n\nRunning as installed app - notifications are fully supported.");
+          return;
+        } else {
+          alert("🔒 Notification permissions are required for alarms.\n\nPlease:\n1. Go to Settings > Apps > VK7Days\n2. Enable 'Notifications'\n3. Enable 'Display over other apps' (if available)\n4. Restart the app\n\nThis ensures your alarms work even when the app is closed.");
+          return;
+        }
+      } catch (error) {
+        console.error('Android notification setup failed:', error);
+        alert("❌ Failed to setup notifications.\n\nPlease check your device settings and try again.");
+        return;
+      }
     }
     
-    // Check if notifications are supported in browser
+    // Browser fallback
     if (typeof Notification === "undefined") {
       alert("🚫 Notifications are not supported in this browser.\n\nFor the best experience, please:\n1. Use Chrome, Firefox, or Edge\n2. Download our Android app");
       return;
@@ -353,6 +391,17 @@ export default function App() {
       if (task) {
         analytics.taskToggled(id, !task.enabled);
         
+        // Update Android notifications
+        if (isInstalledApp || window.Capacitor) {
+          if (!task.enabled) {
+            // Task being enabled - schedule notification
+            androidNotifications.scheduleNotification({...task, enabled: true}, p.activeDay);
+          } else {
+            // Task being disabled - cancel notification
+            androidNotifications.cancelNotification(task.id);
+          }
+        }
+        
         // Update service worker
         navigator.serviceWorker.getRegistrations().then(registrations => {
           registrations.forEach(reg => {
@@ -397,6 +446,11 @@ export default function App() {
 
   function deleteTask(id) {
     analytics.taskDeleted(id);
+    
+    // Cancel Android notification
+    if (isInstalledApp || window.Capacitor) {
+      androidNotifications.cancelNotification(id);
+    }
     
     // Update service worker
     navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -577,7 +631,7 @@ export default function App() {
           <div>
             <div className="brandName">VK7Days</div>
             <div className="brandSub">
-              {isInstalledApp ? "✅ Native App: Notifications Active" : 
+              {isInstalledApp ? "✅ Notifications Active" : 
                notifStatus === "granted" ? "✅ Notifications: ON" : 
                notifStatus === "denied" ? "❌ Notifications: BLOCKED" : "⚠️ Notifications: OFF"}
               {canBgSchedule ? " • Background alarms supported" : ""}
@@ -586,7 +640,7 @@ export default function App() {
         </div>
 
         <div className="topActions">
-          {!isInstalledApp && notifStatus !== "granted" && (
+          {(notifStatus !== "granted" || isInstalledApp) && (
             <button className="btn btn-primary" type="button" onClick={enableNotifications}>
               🔔 Enable Alerts
             </button>
