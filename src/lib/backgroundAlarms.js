@@ -81,40 +81,74 @@ class BackgroundAlarmService {
     }
 
     try {
+      // First check current permissions
       const permissions = await this.checkPermissions();
 
-      let message = "🔔 Background alarms are now enabled!\n\n";
-
-      if (permissions.hasNotificationPermission) {
-        message += "✅ Notifications: Allowed\n";
-      } else {
-        message += "❌ Notifications: Please allow in settings\n";
+      if (permissions.granted) {
+        return {
+          granted: true,
+          message:
+            "🔔 All permissions are already enabled!\n\n✅ Your tasks will trigger even when the app is closed!",
+          permissions,
+        };
       }
 
-      if (permissions.hasExactAlarmPermission) {
-        message += "✅ Exact alarms: Allowed\n";
+      // Request all missing permissions
+      await Capacitor.Plugins.AlarmScheduler.requestAllPermissions();
+
+      // Wait a moment for permissions to be processed
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Check permissions again
+      const updatedPermissions = await this.checkPermissions();
+
+      let message = "🔔 Permission Request Completed!\n\n";
+
+      if (updatedPermissions.hasNotificationPermission) {
+        message += "✅ Notifications: Enabled\n";
       } else {
-        message += "❌ Exact alarms: Please allow in settings\n";
+        message +=
+          "❌ Notifications: Please enable in Settings > Apps > VK7Days > Notifications\n";
       }
 
-      if (!permissions.isBatteryOptimized) {
+      if (updatedPermissions.hasExactAlarmPermission) {
+        message += "✅ Exact alarms: Enabled\n";
+      } else {
+        message +=
+          "❌ Exact alarms: Please enable in Settings > Apps > VK7Days > Set alarms and reminders\n";
+      }
+
+      if (!updatedPermissions.isBatteryOptimized) {
         message += "✅ Battery optimization: Disabled\n";
       } else {
         message +=
-          "⚠️ Battery optimization: Please disable for reliable alarms\n";
+          "⚠️ Battery optimization: Please disable in Settings > Apps > VK7Days > Battery > Unrestricted\n";
       }
 
-      message +=
-        "\n🎯 Your tasks will now trigger even when the app is closed!";
+      if (updatedPermissions.granted) {
+        message +=
+          "\n🎯 Perfect! Your tasks will now trigger even when the app is closed!";
+        message +=
+          "\n🔊 Default ringtone will play continuously until you dismiss or open the app.";
+      } else {
+        message +=
+          "\n⚠️ Some permissions are still missing. Please enable them manually in Settings for reliable alarms.";
+      }
 
       return {
-        granted: permissions.granted,
+        granted: updatedPermissions.granted,
         message,
-        permissions,
+        permissions: updatedPermissions,
       };
     } catch (error) {
       console.error("Error requesting permissions:", error);
-      return { granted: false, reason: "error", error };
+      return {
+        granted: false,
+        reason: "error",
+        error,
+        message:
+          "❌ Error requesting permissions. Please enable them manually in Settings.",
+      };
     }
   }
 

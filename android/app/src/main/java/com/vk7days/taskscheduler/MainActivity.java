@@ -39,9 +39,6 @@ public class MainActivity extends BridgeActivity {
         // Create notification channel for Android 8.0+
         createNotificationChannel();
         
-        // Request all necessary permissions
-        requestAllPermissions();
-        
         // Handle intent from alarm notification
         handleAlarmIntent(getIntent());
         
@@ -53,6 +50,13 @@ public class MainActivity extends BridgeActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleAlarmIntent(intent);
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Stop any playing alarm when app becomes active
+        AlarmSoundService.stopAlarmService(this);
     }
     
     private void handleAlarmIntent(Intent intent) {
@@ -96,46 +100,6 @@ public class MainActivity extends BridgeActivity {
         }
     }
     
-    private void requestAllPermissions() {
-        // Request notification permissions for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
-                != PackageManager.PERMISSION_GRANTED) {
-                
-                ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_REQUEST_CODE);
-            }
-        }
-        
-        // Request exact alarm permission for Android 12+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-            if (!alarmManager.canScheduleExactAlarms()) {
-                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivityForResult(intent, EXACT_ALARM_PERMISSION_REQUEST_CODE);
-            }
-        }
-        
-        // Request to ignore battery optimizations
-        requestBatteryOptimizationExemption();
-    }
-    
-    private void requestBatteryOptimizationExemption() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            String packageName = getPackageName();
-            
-            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                Log.d(TAG, "Requesting battery optimization exemption");
-                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                intent.setData(Uri.parse("package:" + packageName));
-                startActivityForResult(intent, BATTERY_OPTIMIZATION_REQUEST_CODE);
-            }
-        }
-    }
-    
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -170,12 +134,6 @@ public class MainActivity extends BridgeActivity {
                 }
             }
         }
-    }
-    
-    @Override
-    public void onResume() {
-        super.onResume();
-        // App is active - notifications will work normally
     }
     
     // Plugin for scheduling background alarms
@@ -306,6 +264,56 @@ public class MainActivity extends BridgeActivity {
                 .put("hasNotificationPermission", hasNotificationPermission)
                 .put("hasExactAlarmPermission", hasExactAlarmPermission)
                 .put("isBatteryOptimized", isBatteryOptimized));
+        }
+        
+        @PluginMethod
+        public void requestAllPermissions(PluginCall call) {
+            MainActivity activity = (MainActivity) getActivity();
+            if (activity == null) {
+                call.reject("Activity not available");
+                return;
+            }
+            
+            try {
+                // Request notification permissions for Android 13+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) 
+                        != PackageManager.PERMISSION_GRANTED) {
+                        
+                        ActivityCompat.requestPermissions(activity,
+                            new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                            NOTIFICATION_PERMISSION_REQUEST_CODE);
+                    }
+                }
+                
+                // Request exact alarm permission for Android 12+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    AlarmManager alarmManager = (AlarmManager) activity.getSystemService(Context.ALARM_SERVICE);
+                    if (!alarmManager.canScheduleExactAlarms()) {
+                        Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                        intent.setData(Uri.parse("package:" + activity.getPackageName()));
+                        activity.startActivityForResult(intent, EXACT_ALARM_PERMISSION_REQUEST_CODE);
+                    }
+                }
+                
+                // Request to ignore battery optimizations
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    PowerManager powerManager = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+                    String packageName = activity.getPackageName();
+                    
+                    if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                        Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        intent.setData(Uri.parse("package:" + packageName));
+                        activity.startActivityForResult(intent, BATTERY_OPTIMIZATION_REQUEST_CODE);
+                    }
+                }
+                
+                call.resolve(new com.getcapacitor.JSObject().put("success", true));
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Error requesting permissions", e);
+                call.reject("Failed to request permissions: " + e.getMessage());
+            }
         }
     }
 }

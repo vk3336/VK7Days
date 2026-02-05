@@ -7,8 +7,8 @@ android {
         applicationId "com.vk7days.taskscheduler"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0.0"
+        versionCode 3
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -26,6 +26,17 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
+    }
+    
+    // Fix resource merging issues
+    packagingOptions {
+        pickFirst '**/libc++_shared.so'
+        pickFirst '**/libjsc.so'
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/NOTICE.txt'
     }
 }
 
@@ -46,10 +57,14 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
     
-    // Exclude conflicting Kotlin stdlib versions
+    // Exclude conflicting dependencies
     configurations.all {
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+        resolutionStrategy {
+            force 'androidx.core:core:1.12.0'
+            force 'androidx.appcompat:appcompat:1.6.1'
+        }
     }
 }
 

@@ -40,6 +40,22 @@
             </intent-filter>
         </receiver>
 
+        <!-- Alarm Stop Receiver for dismissing alarms -->
+        <receiver android:name=".AlarmStopReceiver" 
+                  android:enabled="true" 
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="STOP_ALARM" />
+                <action android:name="DISMISS_ALARM" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Alarm Sound Service for continuous ringtone -->
+        <service android:name=".AlarmSoundService"
+                 android:enabled="true"
+                 android:exported="false"
+                 android:foregroundServiceType="mediaPlayback" />
+
         <!-- Boot receiver to reschedule alarms after reboot -->
         <receiver android:name=".BootReceiver" 
                   android:enabled="true" 
